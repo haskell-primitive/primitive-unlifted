@@ -1,6 +1,8 @@
 {-# language BangPatterns #-}
+{-# language RankNTypes #-}
 {-# language UnboxedTuples #-}
 {-# language MagicHash #-}
+{-# language ScopedTypeVariables #-}
 
 module Data.Primitive.Unlifted.TVar
   ( UnliftedTVar(..)
@@ -8,13 +10,12 @@ module Data.Primitive.Unlifted.TVar
   , writeUnliftedTVar
   , modifyUnliftedTVar
   , readUnliftedTVar
-  , readUnliftedTVarIO
   ) where
 
 import Data.Primitive.UnliftedArray (PrimUnlifted,toArrayArray#,fromArrayArray#)
 import GHC.IO (IO(..))
 import GHC.Conc (STM(..))
-import GHC.Exts (Any,RealWorld,TVar#,ArrayArray#,unsafeCoerce#)
+import GHC.Exts (Any,RealWorld,TVar#,ArrayArray#,State#,unsafeCoerce#)
 import GHC.Exts (newTVar#,writeTVar#,readTVar#)
 
 data UnliftedTVar a = UnliftedTVar (TVar# RealWorld Any)
@@ -29,7 +30,7 @@ instance PrimUnlifted (UnliftedTVar a) where
 -- possible.
 newUnliftedTVarIO :: PrimUnlifted a => a -> IO (UnliftedTVar a)
 {-# inline newUnliftedTVarIO #-}
-newUnliftedTVarIO a = let !a# = toArrayArray# a in IO $ \s1# ->
+newUnliftedTVarIO a = IO $ \s1# -> let !a# = toArrayArray# a in
   case newTVar# (unsafeCoerce# a# :: Any) s1# of
     (# s2#, tvar# #) -> (# s2#, UnliftedTVar tvar# #)
 
@@ -51,15 +52,4 @@ modifyUnliftedTVar tv f = do
 readUnliftedTVar :: PrimUnlifted a => UnliftedTVar a -> STM a
 {-# inline readUnliftedTVar #-}
 readUnliftedTVar (UnliftedTVar tvar#) = STM $ \s1# -> case readTVar# tvar# s1# of
-  (# s2, v #) -> (# s2, fromArrayArray# ((unsafeCoerce# :: Any -> ArrayArray#) v) #)
-
--- | Return the current value stored in a 'UnliftedTVar'. This is equivalent to
---
--- >  readUnliftedTVarIO = atomically . readUnliftedTVar
---
--- However, it works much faster. It doesn't perform a complete
--- transaction, it just reads the current value of the 'UnliftedTVar'.
-readUnliftedTVarIO :: PrimUnlifted a => UnliftedTVar a -> IO a
-{-# inline readUnliftedTVarIO #-}
-readUnliftedTVarIO (UnliftedTVar tvar#) = IO $ \s1# -> case readTVar# tvar# s1# of
   (# s2, v #) -> (# s2, fromArrayArray# ((unsafeCoerce# :: Any -> ArrayArray#) v) #)

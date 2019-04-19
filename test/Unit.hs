@@ -1,3 +1,5 @@
+{-# language BangPatterns #-}
+
 import Data.Primitive.Unlifted.TVar
 import Data.Primitive
 import Control.Monad.STM
