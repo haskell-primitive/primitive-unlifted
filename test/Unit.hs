@@ -19,7 +19,8 @@ testA = do
   marr <- newByteArray 8
   !r <- atomically $ do
     writeUnliftedTVar tv marr
-    readUnliftedTVar tv
+    !s <- readUnliftedTVar tv
+    pure s
   if sameMutableByteArray marr r
     then pure ()
     else fail ""
