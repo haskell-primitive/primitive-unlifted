@@ -9,8 +9,8 @@ main = do
   putStrLn "Start"
   putStrLn "A"
   testA
-  -- putStrLn "B"
-  -- testB
+  putStrLn "B"
+  testB
   putStrLn "Finished"
 
 testA :: IO ()

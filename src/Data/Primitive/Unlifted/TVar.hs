@@ -17,7 +17,7 @@ import Data.Primitive.UnliftedArray (PrimUnlifted,toArrayArray#,fromArrayArray#)
 import GHC.IO (IO(..))
 import GHC.Conc (STM(..))
 import GHC.Exts (Any,RealWorld,TVar#,ArrayArray#,State#,unsafeCoerce#)
-import GHC.Exts (newTVar#,writeTVar#,readTVar#)
+import GHC.Exts (newTVar#,writeTVar#,readTVar#,readTVarIO#)
 
 data UnliftedTVar a = UnliftedTVar (TVar# RealWorld Any)
 
@@ -65,6 +65,6 @@ readUnliftedTVar (UnliftedTVar tvar#) = STM $ \s1# -> case readTVar# tvar# s1# o
 -- TODO: This causes segfaults. Not sure why.
 readUnliftedTVarIO :: PrimUnlifted a => UnliftedTVar a -> IO a
 {-# inline readUnliftedTVarIO #-}
-readUnliftedTVarIO (UnliftedTVar tvar#) = IO $ \s1# -> case readTVar# tvar# s1# of
+readUnliftedTVarIO (UnliftedTVar tvar#) = IO $ \s1# -> case readTVarIO# tvar# s1# of
   (# s2, v #) -> (# s2, fromArrayArray# ((unsafeCoerce# :: Any -> ArrayArray#) v) #)
 
