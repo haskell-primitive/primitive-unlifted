@@ -10,6 +10,7 @@ module Data.Primitive.Unlifted.TVar
   , writeUnliftedTVar
   , modifyUnliftedTVar
   , readUnliftedTVar
+  , readUnliftedTVarIO
   ) where
 
 import Data.Primitive.UnliftedArray (PrimUnlifted,toArrayArray#,fromArrayArray#)
@@ -53,3 +54,17 @@ readUnliftedTVar :: PrimUnlifted a => UnliftedTVar a -> STM a
 {-# inline readUnliftedTVar #-}
 readUnliftedTVar (UnliftedTVar tvar#) = STM $ \s1# -> case readTVar# tvar# s1# of
   (# s2, v #) -> (# s2, fromArrayArray# ((unsafeCoerce# :: Any -> ArrayArray#) v) #)
+
+-- | Return the current value stored in a 'UnliftedTVar'. This is equivalent to
+--
+-- >  readUnliftedTVarIO = atomically . readUnliftedTVar
+--
+-- However, it works much faster. It doesn't perform a complete
+-- transaction, it just reads the current value of the 'UnliftedTVar'.
+--
+-- TODO: This causes segfaults. Not sure why.
+readUnliftedTVarIO :: PrimUnlifted a => UnliftedTVar a -> IO a
+{-# inline readUnliftedTVarIO #-}
+readUnliftedTVarIO (UnliftedTVar tvar#) = IO $ \s1# -> case readTVar# tvar# s1# of
+  (# s2, v #) -> (# s2, fromArrayArray# ((unsafeCoerce# :: Any -> ArrayArray#) v) #)
+
