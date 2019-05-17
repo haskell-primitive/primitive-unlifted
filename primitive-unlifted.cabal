@@ -17,10 +17,10 @@ library
     Data.Primitive.Unlifted.Class
     Data.Primitive.Unlifted.Array
   build-depends:
-    , base ^>=4.12.0.0
+    , base >=4.11.1.0 && <5
     , primitive >= 0.7 && <0.8
   hs-source-dirs: src
-  ghc-options: -Wall -O2 -ddump-simpl -dcore-lint -ddump-to-file
+  ghc-options: -Wall -O2
   default-language: Haskell2010
 
 test-suite unit
@@ -32,5 +32,5 @@ test-suite unit
     , primitive-unlifted
     , primitive
     , stm
-  ghc-options: -Wall -O2 -ddump-simpl -dcore-lint -ddump-to-file
+  ghc-options: -Wall -O2
   default-language: Haskell2010
