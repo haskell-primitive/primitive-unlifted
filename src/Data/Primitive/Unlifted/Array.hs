@@ -65,6 +65,10 @@ module Data.Primitive.Unlifted.Array
   , foldrUnliftedArray'
   , foldlUnliftedArray
   , foldlUnliftedArray'
+  , foldlUnliftedArrayM'
+    -- * Traversals
+  , traverseUnliftedArray_
+  , itraverseUnliftedArray_
     -- * Mapping
   , mapUnliftedArray
   ) where
@@ -342,6 +346,41 @@ foldlUnliftedArray' f z0 arr = go 0 z0
     go !i !acc
       | i < sz = go (i + 1) (f acc (indexUnliftedArray arr i))
       | otherwise = acc
+
+-- | Strict effectful left-associated fold over the elements of an 'UnliftedArray'.
+{-# INLINE foldlUnliftedArrayM' #-}
+foldlUnliftedArrayM' :: (PrimUnlifted a, Monad m)
+  => (b -> a -> m b) -> b -> UnliftedArray a -> m b
+foldlUnliftedArrayM' f z0 arr = go 0 z0
+  where
+    !sz = sizeofUnliftedArray arr
+    go !i !acc
+      | i < sz = f acc (indexUnliftedArray arr i) >>= go (i + 1) 
+      | otherwise = pure acc
+
+-- | Effectfully traverse the elements of an 'UnliftedArray', discarding
+-- the resulting values.
+{-# INLINE traverseUnliftedArray_ #-}
+traverseUnliftedArray_ :: (PrimUnlifted a, Applicative m)
+  => (a -> m b) -> UnliftedArray a -> m ()
+traverseUnliftedArray_ f arr = go 0
+  where
+    !sz = sizeofUnliftedArray arr
+    go !i
+      | i < sz = f (indexUnliftedArray arr i) *> go (i + 1) 
+      | otherwise = pure ()
+
+-- | Effectful indexed traversal of the elements of an 'UnliftedArray',
+-- discarding the resulting values.
+{-# INLINE itraverseUnliftedArray_ #-}
+itraverseUnliftedArray_ :: (PrimUnlifted a, Applicative m)
+  => (Int -> a -> m b) -> UnliftedArray a -> m ()
+itraverseUnliftedArray_ f arr = go 0
+  where
+    !sz = sizeofUnliftedArray arr
+    go !i
+      | i < sz = f i (indexUnliftedArray arr i) *> go (i + 1) 
+      | otherwise = pure ()
 
 -- | Map over the elements of an 'UnliftedArray'.
 {-# INLINE mapUnliftedArray #-}
