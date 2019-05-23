@@ -6,6 +6,7 @@ module Data.Primitive.Unlifted.Class
   ( PrimUnlifted(..)
   ) where
 
+import Data.Primitive.PrimArray (PrimArray(..),MutablePrimArray(..))
 import Data.Primitive.ByteArray (ByteArray(..),MutableByteArray(..))
 import GHC.Exts (State#,MutableByteArray#,ByteArray#,Int#)
 import GHC.Exts (ArrayArray#,MutableArrayArray#,RuntimeRep(UnliftedRep))
@@ -33,6 +34,18 @@ class PrimUnlifted a where
     -> Int#
     -> a
 
+instance PrimUnlifted (PrimArray a) where
+  {-# inline writeUnliftedArray# #-}
+  {-# inline readUnliftedArray# #-}
+  {-# inline indexUnliftedArray# #-}
+  type Unlifted (PrimArray a) = ByteArray#
+  toUnlifted# (PrimArray x) = x
+  fromUnlifted# x = PrimArray x
+  writeUnliftedArray# a i (PrimArray x) = Exts.writeByteArrayArray# a i x
+  readUnliftedArray# a i s0 = case Exts.readByteArrayArray# a i s0 of
+    (# s1, x #) -> (# s1, PrimArray x #)
+  indexUnliftedArray# a i = PrimArray (Exts.indexByteArrayArray# a i)
+
 instance PrimUnlifted ByteArray where
   {-# inline writeUnliftedArray# #-}
   {-# inline readUnliftedArray# #-}
@@ -57,6 +70,19 @@ instance PrimUnlifted (MutableByteArray s) where
   readUnliftedArray# a i s0 = case Exts.readMutableByteArrayArray# a i s0 of
     (# s1, x #) -> (# s1, MutableByteArray (retoken x) #)
   indexUnliftedArray# a i = MutableByteArray (baToMba (Exts.indexByteArrayArray# a i))
+
+instance PrimUnlifted (MutablePrimArray s a) where
+  {-# inline writeUnliftedArray# #-}
+  {-# inline readUnliftedArray# #-}
+  {-# inline indexUnliftedArray# #-}
+  type Unlifted (MutablePrimArray s a) = MutableByteArray# s
+  toUnlifted# (MutablePrimArray x) = x
+  fromUnlifted# x = MutablePrimArray x
+  writeUnliftedArray# a i (MutablePrimArray x) =
+    Exts.writeMutableByteArrayArray# a i (retoken x)
+  readUnliftedArray# a i s0 = case Exts.readMutableByteArrayArray# a i s0 of
+    (# s1, x #) -> (# s1, MutablePrimArray (retoken x) #)
+  indexUnliftedArray# a i = MutablePrimArray (baToMba (Exts.indexByteArrayArray# a i))
 
 baToMba :: ByteArray# -> MutableByteArray# s
 {-# inline baToMba #-}

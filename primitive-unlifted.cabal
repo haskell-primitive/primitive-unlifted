@@ -1,6 +1,6 @@
 cabal-version: 2.2
 name: primitive-unlifted
-version: 0.1.0.0
+version: 0.1.1.0
 synopsis: Primitive GHC types with unlifted types inside
 homepage: https://github.com/andrewthad/primitive-unlifted
 bug-reports: https://github.com/andrewthad/primitive-unlifted/issues
