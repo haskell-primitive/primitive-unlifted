@@ -2,9 +2,14 @@ cabal-version: 2.2
 name: primitive-unlifted
 version: 0.1.2.0
 synopsis: Primitive GHC types with unlifted types inside
-description: Primitive GHC types with unlifted types inside.
-homepage: https://github.com/andrewthad/primitive-unlifted
-bug-reports: https://github.com/andrewthad/primitive-unlifted/issues
+description:
+  Primitive GHC types with unlifted types inside. There used
+  to be a module named `Data.Primitive.UnliftedArray` in the
+  `primitive` library. However, the techniques it used were
+  unsound in the presence of certain FFI calls. This library
+  a successor to that module.
+homepage: https://github.com/haskell-primitive/primitive-unlifted
+bug-reports: https://github.com/haskell-primitive/primitive-unlifted/issues
 license: BSD-3-Clause
 license-file: LICENSE
 author: Andrew Martin
