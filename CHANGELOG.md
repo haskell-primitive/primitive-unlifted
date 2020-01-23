@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to the [Haskell Package Versioning Policy](https://pvp.haskell.org/).
 
+## 0.1.3.0 -- 2020-01-23
+
+* Add `PrimUnlifted` instances for `ShortText` and `ShortByteString`.
+* Add `singletonUnliftedArray`.
+
 ## 0.1.2.0 -- 2019-07-08
 
 * Add `PrimUnlifted` instances for `MVar`, `IORef`, and `STRef`.

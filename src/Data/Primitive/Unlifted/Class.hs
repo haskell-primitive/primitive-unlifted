@@ -7,6 +7,9 @@ module Data.Primitive.Unlifted.Class
   ( PrimUnlifted(..)
   ) where
 
+import Data.ByteString.Short.Internal (ShortByteString(SBS))
+import Data.Text.Short (ShortText,toShortByteString)
+import Data.Text.Short.Unsafe (fromShortByteStringUnsafe)
 import Data.Primitive.PrimArray (PrimArray(..),MutablePrimArray(..))
 import Data.Primitive.ByteArray (ByteArray(..),MutableByteArray(..))
 import GHC.MVar (MVar(..))
@@ -63,6 +66,31 @@ instance PrimUnlifted ByteArray where
   readUnliftedArray# a i s0 = case Exts.readByteArrayArray# a i s0 of
     (# s1, x #) -> (# s1, ByteArray x #)
   indexUnliftedArray# a i = ByteArray (Exts.indexByteArrayArray# a i)
+
+instance PrimUnlifted ShortByteString where
+  {-# inline writeUnliftedArray# #-}
+  {-# inline readUnliftedArray# #-}
+  {-# inline indexUnliftedArray# #-}
+  type Unlifted ShortByteString = ByteArray#
+  toUnlifted# (SBS x) = x
+  fromUnlifted# x = SBS x
+  writeUnliftedArray# a i (SBS x) = Exts.writeByteArrayArray# a i x
+  readUnliftedArray# a i s0 = case Exts.readByteArrayArray# a i s0 of
+    (# s1, x #) -> (# s1, SBS x #)
+  indexUnliftedArray# a i = SBS (Exts.indexByteArrayArray# a i)
+
+instance PrimUnlifted ShortText where
+  {-# inline writeUnliftedArray# #-}
+  {-# inline readUnliftedArray# #-}
+  {-# inline indexUnliftedArray# #-}
+  type Unlifted ShortText = ByteArray#
+  toUnlifted# t = case toShortByteString t of { SBS x -> x }
+  fromUnlifted# x = fromShortByteStringUnsafe (SBS x)
+  writeUnliftedArray# a i t = case toShortByteString t of
+    SBS x -> Exts.writeByteArrayArray# a i x
+  readUnliftedArray# a i s0 = case Exts.readByteArrayArray# a i s0 of
+    (# s1, x #) -> (# s1, fromShortByteStringUnsafe (SBS x) #)
+  indexUnliftedArray# a i = fromShortByteStringUnsafe (SBS (Exts.indexByteArrayArray# a i))
 
 -- This uses unsafeCoerce# in the implementation of
 -- indexUnliftedArray#. This does not lead to corruption FFI codegen

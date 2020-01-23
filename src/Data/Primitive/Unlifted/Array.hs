@@ -55,6 +55,7 @@ module Data.Primitive.Unlifted.Array
   , cloneUnliftedArray
   , cloneMutableUnliftedArray
   , emptyUnliftedArray
+  , singletonUnliftedArray
   , runUnliftedArray
     -- * List Conversion
   , unliftedArrayToList
@@ -303,6 +304,12 @@ emptyUnliftedArray :: UnliftedArray a
 emptyUnliftedArray = runUnliftedArray (unsafeNewUnliftedArray 0)
 {-# NOINLINE emptyUnliftedArray #-}
 
+singletonUnliftedArray :: PrimUnlifted a => a -> UnliftedArray a
+{-# INLINE singletonUnliftedArray #-}
+singletonUnliftedArray x = runUnliftedArray $ do
+  dst <- unsafeNewUnliftedArray 1
+  writeUnliftedArray dst 0 x
+  pure dst
 
 concatUnliftedArray :: UnliftedArray a -> UnliftedArray a -> UnliftedArray a
 {-# INLINE concatUnliftedArray #-}
