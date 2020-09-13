@@ -86,9 +86,11 @@ import qualified GHC.ST as ST
 
 data MutableUnliftedArray s a
   = MutableUnliftedArray (MutableArrayArray# s)
+type role MutableUnliftedArray nominal representational
 
 data UnliftedArray a
   = UnliftedArray ArrayArray#
+type role UnliftedArray representational
 
 -- | Creates a new 'MutableUnliftedArray'. This function is unsafe because it
 -- initializes all elements of the array as pointers to the array itself. Attempting
