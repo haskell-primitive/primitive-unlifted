@@ -4,6 +4,7 @@
 {-# language ScopedTypeVariables #-}
 {-# language TypeFamilies #-}
 {-# language UnboxedTuples #-}
+{-# language RoleAnnotations #-}
 
 -- |
 -- GHC contains three general classes of value types:
