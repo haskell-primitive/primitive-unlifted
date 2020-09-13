@@ -77,7 +77,7 @@ module Data.Primitive.Unlifted.Array
 
 import Control.Monad.Primitive (PrimMonad,PrimState,primitive,primitive_)
 import Control.Monad.ST (ST)
-import Data.Primitive.Unlifted.Class (PrimUnlifted)
+import Data.Primitive.Unlifted.Class (PrimUnlifted (..))
 import GHC.Exts (Int(I#),MutableArrayArray#,ArrayArray#,State#)
 
 import qualified Data.List as L
@@ -92,6 +92,36 @@ type role MutableUnliftedArray nominal representational
 data UnliftedArray a
   = UnliftedArray ArrayArray#
 type role UnliftedArray representational
+
+instance PrimUnlifted (UnliftedArray a) where
+  {-# inline writeUnliftedArray# #-}
+  {-# inline readUnliftedArray# #-}
+  {-# inline indexUnliftedArray# #-}
+  type Unlifted (UnliftedArray a) = ArrayArray#
+  toUnlifted# (UnliftedArray a) = a
+  fromUnlifted# x = UnliftedArray x
+  writeUnliftedArray# a i (UnliftedArray x) = Exts.writeArrayArrayArray# a i x
+  readUnliftedArray# a i s0 = case Exts.readArrayArrayArray# a i s0 of
+    (# s1, x #) -> (# s1, UnliftedArray x #)
+  indexUnliftedArray# a i = UnliftedArray (Exts.indexArrayArrayArray# a i)
+
+instance PrimUnlifted (MutableUnliftedArray s a) where
+  {-# inline writeUnliftedArray# #-}
+  {-# inline readUnliftedArray# #-}
+  {-# inline indexUnliftedArray# #-}
+  type Unlifted (MutableUnliftedArray s a) = MutableArrayArray# s
+  toUnlifted# (MutableUnliftedArray a) = a
+  fromUnlifted# x = MutableUnliftedArray x
+  writeUnliftedArray# a i (MutableUnliftedArray x) = Exts.writeMutableArrayArrayArray# a i (retoken x)
+  readUnliftedArray# a i s0 = case Exts.readMutableArrayArrayArray# a i s0 of
+    (# s1, x #) -> (# s1, MutableUnliftedArray (retoken x) #)
+  indexUnliftedArray# a i = MutableUnliftedArray (arrArrToMutArrArr (Exts.indexArrayArrayArray# a i))
+
+retoken :: MutableArrayArray# s -> MutableArrayArray# r
+retoken = Exts.unsafeCoerce#
+
+arrArrToMutArrArr :: ArrayArray# -> MutableArrayArray# s
+arrArrToMutArrArr = Exts.unsafeCoerce#
 
 -- | Creates a new 'MutableUnliftedArray'. This function is unsafe because it
 -- initializes all elements of the array as pointers to the array itself. Attempting
