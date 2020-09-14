@@ -23,6 +23,7 @@ library
   exposed-modules:
     Data.Primitive.Unlifted.Class
     Data.Primitive.Unlifted.Array
+    Data.Primitive.Unlifted.Array.Base
   build-depends:
     , base >=4.14.0.0 && <5
     , bytestring >=0.10.8.2 && <0.11

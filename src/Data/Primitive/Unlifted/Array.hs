@@ -78,74 +78,40 @@ module Data.Primitive.Unlifted.Array
 import Control.Monad.Primitive (PrimMonad,PrimState,primitive,primitive_)
 import Control.Monad.ST (ST)
 import Data.Primitive.Unlifted.Class (PrimUnlifted (..))
-import GHC.Exts (Int(I#),MutableArrayArray#,ArrayArray#,State#)
-
-import qualified Data.List as L
-import qualified Data.Primitive.Unlifted.Class as C
-import qualified GHC.Exts as Exts
+import Data.Primitive.Unlifted.Array.Base
+import GHC.Exts (Int(I#),State#)
 import qualified GHC.ST as ST
 
-data MutableUnliftedArray s a
-  = MutableUnliftedArray (MutableArrayArray# s)
-type role MutableUnliftedArray nominal representational
+import qualified Data.List as L
+import qualified GHC.Exts as Exts
 
 data UnliftedArray a
-  = UnliftedArray ArrayArray#
-type role UnliftedArray representational
+  = UnliftedArray (UnliftedArray# (Unlifted a))
+type role UnliftedArray nominal
+
+data MutableUnliftedArray s a
+  = MutableUnliftedArray (MutableUnliftedArray# s (Unlifted a))
+type role MutableUnliftedArray nominal nominal
 
 instance PrimUnlifted (UnliftedArray a) where
-  {-# inline writeUnliftedArray# #-}
-  {-# inline readUnliftedArray# #-}
-  {-# inline indexUnliftedArray# #-}
-  type Unlifted (UnliftedArray a) = ArrayArray#
+  type Unlifted (UnliftedArray a) = UnliftedArray# (Unlifted a)
   toUnlifted# (UnliftedArray a) = a
   fromUnlifted# x = UnliftedArray x
-  writeUnliftedArray# a i (UnliftedArray x) = Exts.writeArrayArrayArray# a i x
-  readUnliftedArray# a i s0 = case Exts.readArrayArrayArray# a i s0 of
-    (# s1, x #) -> (# s1, UnliftedArray x #)
-  indexUnliftedArray# a i = UnliftedArray (Exts.indexArrayArrayArray# a i)
 
 instance PrimUnlifted (MutableUnliftedArray s a) where
-  {-# inline writeUnliftedArray# #-}
-  {-# inline readUnliftedArray# #-}
-  {-# inline indexUnliftedArray# #-}
-  type Unlifted (MutableUnliftedArray s a) = MutableArrayArray# s
+  type Unlifted (MutableUnliftedArray s a) = MutableUnliftedArray# s (Unlifted a)
   toUnlifted# (MutableUnliftedArray a) = a
   fromUnlifted# x = MutableUnliftedArray x
-  writeUnliftedArray# a i (MutableUnliftedArray x) = Exts.writeMutableArrayArrayArray# a i (retoken x)
-  readUnliftedArray# a i s0 = case Exts.readMutableArrayArrayArray# a i s0 of
-    (# s1, x #) -> (# s1, MutableUnliftedArray (retoken x) #)
-  indexUnliftedArray# a i = MutableUnliftedArray (arrArrToMutArrArr (Exts.indexArrayArrayArray# a i))
-
-retoken :: MutableArrayArray# s -> MutableArrayArray# r
-retoken = Exts.unsafeCoerce#
-
-arrArrToMutArrArr :: ArrayArray# -> MutableArrayArray# s
-arrArrToMutArrArr = Exts.unsafeCoerce#
-
--- | Creates a new 'MutableUnliftedArray'. This function is unsafe because it
--- initializes all elements of the array as pointers to the array itself. Attempting
--- to read one of these elements before writing to it is in effect an unsafe
--- coercion from the @'MutableUnliftedArray' s a@ to the element type.
-unsafeNewUnliftedArray
-  :: (PrimMonad m)
-  => Int -- ^ size
-  -> m (MutableUnliftedArray (PrimState m) a)
-{-# inline unsafeNewUnliftedArray #-}
-unsafeNewUnliftedArray (I# i#) = primitive $ \s -> case Exts.newArrayArray# i# s of
-  (# s', maa# #) -> (# s', MutableUnliftedArray maa# #)
 
 -- | Creates a new 'MutableUnliftedArray' with the specified value as initial
--- contents. This is slower than 'unsafeNewUnliftedArray', but safer.
+-- contents.
 newUnliftedArray
   :: (PrimMonad m, PrimUnlifted a)
   => Int -- ^ size
   -> a -- ^ initial value
   -> m (MutableUnliftedArray (PrimState m) a)
-newUnliftedArray len v = do
-  mua <- unsafeNewUnliftedArray len
-  setUnliftedArray mua v 0 len
-  pure mua
+newUnliftedArray (I# len) v = primitive $ \s -> case newUnliftedArray# len (toUnlifted# v) s of
+  (# s', ma #) -> (# s', MutableUnliftedArray ma #)
 {-# inline newUnliftedArray #-}
 
 setUnliftedArray
@@ -165,13 +131,13 @@ setUnliftedArray mua v off len = loop (len + off - 1)
 -- | Yields the length of an 'UnliftedArray'.
 sizeofUnliftedArray :: UnliftedArray e -> Int
 {-# inline sizeofUnliftedArray #-}
-sizeofUnliftedArray (UnliftedArray aa#) = I# (Exts.sizeofArrayArray# aa#)
+sizeofUnliftedArray (UnliftedArray ar) = I# (sizeofUnliftedArray# ar)
 
 -- | Yields the length of a 'MutableUnliftedArray'.
 sizeofMutableUnliftedArray :: MutableUnliftedArray s e -> Int
 {-# inline sizeofMutableUnliftedArray #-}
 sizeofMutableUnliftedArray (MutableUnliftedArray maa#)
-  = I# (Exts.sizeofMutableArrayArray# maa#)
+  = I# (sizeofMutableUnliftedArray# maa#)
 
 writeUnliftedArray :: (PrimMonad m, PrimUnlifted a)
   => MutableUnliftedArray (PrimState m) a
@@ -180,7 +146,7 @@ writeUnliftedArray :: (PrimMonad m, PrimUnlifted a)
   -> m ()
 {-# inline writeUnliftedArray #-}
 writeUnliftedArray (MutableUnliftedArray arr) (I# ix) a =
-  primitive_ (C.writeUnliftedArray# arr ix a)
+  primitive_ (writeUnliftedArray# arr ix (toUnlifted# a))
 
 readUnliftedArray :: (PrimMonad m, PrimUnlifted a)
   => MutableUnliftedArray (PrimState m) a
@@ -188,7 +154,8 @@ readUnliftedArray :: (PrimMonad m, PrimUnlifted a)
   -> m a
 {-# inline readUnliftedArray #-}
 readUnliftedArray (MutableUnliftedArray arr) (I# ix) =
-  primitive (C.readUnliftedArray# arr ix)
+  primitive $ \s -> case readUnliftedArray# arr ix s of
+    (# s', a #) -> (# s', fromUnlifted# a #)
 
 indexUnliftedArray :: PrimUnlifted a
   => UnliftedArray a
@@ -196,17 +163,17 @@ indexUnliftedArray :: PrimUnlifted a
   -> a
 {-# inline indexUnliftedArray #-}
 indexUnliftedArray (UnliftedArray arr) (I# ix) =
-  C.indexUnliftedArray# arr ix
+  fromUnlifted# (indexUnliftedArray# arr ix)
 
 -- | Freezes a 'MutableUnliftedArray', yielding an 'UnliftedArray'. This simply
 -- marks the array as frozen in place, so it should only be used when no further
 -- modifications to the mutable array will be performed.
 unsafeFreezeUnliftedArray
-  :: (PrimMonad m)
+  :: PrimMonad m
   => MutableUnliftedArray (PrimState m) a
   -> m (UnliftedArray a)
 unsafeFreezeUnliftedArray (MutableUnliftedArray maa#)
-  = primitive $ \s -> case Exts.unsafeFreezeArrayArray# maa# s of
+  = primitive $ \s -> case unsafeFreezeUnliftedArray# maa# s of
       (# s', aa# #) -> (# s', UnliftedArray aa# #)
 {-# inline unsafeFreezeUnliftedArray #-}
 
@@ -217,7 +184,7 @@ sameMutableUnliftedArray
   -> MutableUnliftedArray s a
   -> Bool
 sameMutableUnliftedArray (MutableUnliftedArray maa1#) (MutableUnliftedArray maa2#)
-  = Exts.isTrue# (Exts.sameMutableArrayArray# maa1# maa2#)
+  = Exts.isTrue# (sameMutableUnliftedArray# maa1# maa2#)
 {-# inline sameMutableUnliftedArray #-}
 
 -- | Copies the contents of an immutable array into a mutable array.
@@ -233,8 +200,7 @@ copyUnliftedArray
 copyUnliftedArray
   (MutableUnliftedArray dst) (I# doff)
   (UnliftedArray src) (I# soff) (I# ln) =
-    primitive_ $ Exts.copyArrayArray# src soff dst doff ln
-
+    primitive_ $ copyUnliftedArray# src soff dst doff ln
 
 -- | Copies the contents of one mutable array into another.
 copyMutableUnliftedArray
@@ -249,8 +215,7 @@ copyMutableUnliftedArray
 copyMutableUnliftedArray
   (MutableUnliftedArray dst) (I# doff)
   (MutableUnliftedArray src) (I# soff) (I# ln) =
-    primitive_ $ Exts.copyMutableArrayArray# src soff dst doff ln
-
+    primitive_ $ copyMutableUnliftedArray# src soff dst doff ln
 
 -- | Freezes a portion of a 'MutableUnliftedArray', yielding an 'UnliftedArray'.
 -- This operation is safe, in that it copies the frozen portion, and the
@@ -261,12 +226,10 @@ freezeUnliftedArray
   -> Int -- ^ offset
   -> Int -- ^ length
   -> m (UnliftedArray a)
-freezeUnliftedArray src off len = do
-  dst <- unsafeNewUnliftedArray len
-  copyMutableUnliftedArray dst 0 src off len
-  unsafeFreezeUnliftedArray dst
+freezeUnliftedArray (MutableUnliftedArray mary) (I# off) (I# len) =
+    primitive $ \s -> case freezeUnliftedArray# mary off len s of
+      (# s', ary #) -> (# s', UnliftedArray ary #)
 {-# inline freezeUnliftedArray #-}
-
 
 -- | Thaws a portion of an 'UnliftedArray', yielding a 'MutableUnliftedArray'.
 -- This copies the thawed portion, so mutations will not affect the original
@@ -278,10 +241,30 @@ thawUnliftedArray
   -> Int -- ^ length
   -> m (MutableUnliftedArray (PrimState m) a)
 {-# inline thawUnliftedArray #-}
-thawUnliftedArray src off len = do
-  dst <- unsafeNewUnliftedArray len
-  copyUnliftedArray dst 0 src off len
-  return dst
+thawUnliftedArray (UnliftedArray ary) (I# off) (I# len) =
+    primitive $ \s -> case thawUnliftedArray# ary off len s of
+      (# s', mary #) -> (# s', MutableUnliftedArray mary #)
+
+-- | Execute a stateful computation and freeze the resulting array.
+runUnliftedArray
+  :: (forall s. ST s (MutableUnliftedArray s a))
+  -> UnliftedArray a
+{-# INLINE runUnliftedArray #-}
+-- This is what we'd like to write, but GHC does not yet
+-- produce properly unboxed code when we do
+-- runUnliftedArray m = runST $ m >>= unsafeFreezeUnliftedArray
+runUnliftedArray m = UnliftedArray (runUnliftedArray# m)
+
+runUnliftedArray#
+  :: (forall s. ST s (MutableUnliftedArray s a))
+  -> UnliftedArray# (Unlifted a)
+runUnliftedArray# m = case Exts.runRW# $ \s ->
+  case unST m s of { (# s', MutableUnliftedArray mary# #) ->
+  unsafeFreezeUnliftedArray# mary# s'} of (# _, ary# #) -> ary#
+{-# INLINE runUnliftedArray# #-}
+
+unST :: ST s a -> State# s -> (# State# s, a #)
+unST (ST.ST f) = f
 
 unsafeCreateUnliftedArray
   :: Int
@@ -292,22 +275,18 @@ unsafeCreateUnliftedArray !n f = runUnliftedArray $ do
   f mary
   pure mary
 
--- | Execute a stateful computation and freeze the resulting array.
-runUnliftedArray
-  :: (forall s. ST s (MutableUnliftedArray s a))
-  -> UnliftedArray a
-{-# INLINE runUnliftedArray #-}
-runUnliftedArray m = UnliftedArray (runUnliftedArray# m)
+-- | Creates a new 'MutableUnliftedArray'. This function is unsafe because it
+-- initializes all elements of the array as pointers to the empty array. Attempting
+-- to read one of these elements before writing to it is in effect an unsafe
+-- coercion from @'UnliftedArray' a@ to the element type.
+unsafeNewUnliftedArray
+  :: (PrimMonad m)
+  => Int -- ^ size
+  -> m (MutableUnliftedArray (PrimState m) a)
+{-# inline unsafeNewUnliftedArray #-}
+unsafeNewUnliftedArray (I# i) = primitive $ \s -> case unsafeNewUnliftedArray# i s of
+  (# s', ma #) -> (# s', MutableUnliftedArray ma #)
 
-runUnliftedArray#
-  :: (forall s. ST s (MutableUnliftedArray s a))
-  -> ArrayArray#
-runUnliftedArray# m = case Exts.runRW# $ \s ->
-  case unST m s of { (# s', MutableUnliftedArray mary# #) ->
-  Exts.unsafeFreezeArrayArray# mary# s'} of (# _, ary# #) -> ary#
-
-unST :: ST s a -> State# s -> (# State# s, a #)
-unST (ST.ST f) = f
 
 -- | Creates a copy of a portion of an 'UnliftedArray'
 cloneUnliftedArray
@@ -316,8 +295,8 @@ cloneUnliftedArray
   -> Int -- ^ length
   -> UnliftedArray a
 {-# inline cloneUnliftedArray #-}
-cloneUnliftedArray src off len =
-  runUnliftedArray (thawUnliftedArray src off len)
+cloneUnliftedArray (UnliftedArray ary) (I# off) (I# len)
+  = UnliftedArray (cloneUnliftedArray# ary off len)
 
 -- | Creates a new 'MutableUnliftedArray' containing a copy of a portion of
 -- another mutable array.
@@ -328,27 +307,43 @@ cloneMutableUnliftedArray
   -> Int -- ^ length
   -> m (MutableUnliftedArray (PrimState m) a)
 {-# inline cloneMutableUnliftedArray #-}
-cloneMutableUnliftedArray src off len = do
-  dst <- unsafeNewUnliftedArray len
-  copyMutableUnliftedArray dst 0 src off len
-  return dst
+cloneMutableUnliftedArray (MutableUnliftedArray mary) (I# off) (I# len)
+  = primitive $ \s -> case cloneMutableUnliftedArray# mary off len s of
+      (# s', mary' #) -> (# s', MutableUnliftedArray mary' #)
 
 emptyUnliftedArray :: UnliftedArray a
-emptyUnliftedArray = runUnliftedArray (unsafeNewUnliftedArray 0)
-{-# NOINLINE emptyUnliftedArray #-}
+emptyUnliftedArray = UnliftedArray (emptyUnliftedArray# Exts.void#)
 
 singletonUnliftedArray :: PrimUnlifted a => a -> UnliftedArray a
 {-# INLINE singletonUnliftedArray #-}
-singletonUnliftedArray x = runUnliftedArray $ do
-  dst <- unsafeNewUnliftedArray 1
-  writeUnliftedArray dst 0 x
-  pure dst
+singletonUnliftedArray x = runUnliftedArray $ newUnliftedArray 1 x
 
 concatUnliftedArray :: UnliftedArray a -> UnliftedArray a -> UnliftedArray a
 {-# INLINE concatUnliftedArray #-}
-concatUnliftedArray x y = unsafeCreateUnliftedArray (sizeofUnliftedArray x + sizeofUnliftedArray y) $ \m -> do
-  copyUnliftedArray m 0 x 0 (sizeofUnliftedArray x)
-  copyUnliftedArray m (sizeofUnliftedArray x) y 0 (sizeofUnliftedArray y)
+concatUnliftedArray (UnliftedArray a1) (UnliftedArray a2)
+  = UnliftedArray (concatUnliftedArray# a1 a2)
+
+-- This junk is to make sure we unbox properly. Inlining this doesn't seem
+-- likely to be much of a win ever, and could potentially lead to reboxing,
+-- so we NOINLINE. It would be nice to find a prettier way to do this.
+concatUnliftedArray# :: UnliftedArray# a -> UnliftedArray# a -> UnliftedArray# a
+{-# NOINLINE concatUnliftedArray# #-}
+concatUnliftedArray# a1 a2 =
+  let !sza1 = sizeofUnliftedArray# a1
+  in
+    if Exts.isTrue# (sza1 Exts.==# 0#)
+    then a2
+    else
+      let !sza2 = sizeofUnliftedArray# a2
+      in
+        if Exts.isTrue# (sza2 Exts.==# 0#)
+        then a1
+        else Exts.runRW# $ \s ->
+          case unsafeNewUnliftedArray# (sza1 Exts.+# sza2) s of { (# s', ma #) ->
+          case copyUnliftedArray# a1 0# ma 0# sza1 s' of { s'' ->
+          case copyUnliftedArray# a2 0# ma sza1 sza2 s'' of { s''' ->
+          case unsafeFreezeUnliftedArray# ma s''' of
+            (# _, ar #) -> ar}}}
 
 foldrUnliftedArray :: forall a b. PrimUnlifted a => (a -> b -> b) -> b -> UnliftedArray a -> b
 {-# INLINE foldrUnliftedArray #-}
