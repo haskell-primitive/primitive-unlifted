@@ -5,9 +5,11 @@ synopsis: Primitive GHC types with unlifted types inside
 description:
   Primitive GHC types with unlifted types inside. There used
   to be a module named `Data.Primitive.UnliftedArray` in the
-  `primitive` library. However, the techniques it used were
-  unsound in the presence of certain FFI calls. This library
-  a successor to that module.
+  `primitive` library. However, it turns out that it is impossible
+  to write such an API safely in versions of GHC before 8.10.1, thanks
+  to some nasty interactions between unsafe coercions and the foreign
+  function interface. This package also uses a somewhat different,
+  and more flexible, approach than that module did.
 homepage: https://github.com/haskell-primitive/primitive-unlifted
 bug-reports: https://github.com/haskell-primitive/primitive-unlifted/issues
 license: BSD-3-Clause
@@ -17,17 +19,25 @@ maintainer: andrew.thaddeus@gmail.com
 copyright: 2019 Andrew Martin
 category: Data
 extra-source-files: CHANGELOG.md
-tested-with: GHC == 8.4.4, GHC == 8.6.5
+tested-with: GHC == 8.10.1
 
 library
   exposed-modules:
     Data.Primitive.Unlifted.Class
     Data.Primitive.Unlifted.Array
+    Data.Primitive.Unlifted.SmallArray
+    Data.Primitive.Unlifted.SmallArray.ST
+    Data.Primitive.Unlifted.SmallArray.Primops
+    Data.Primitive.Unlifted.Array.ST
+    Data.Primitive.Unlifted.Array.Primops
+    Data.Primitive.Unlifted.Box
+    Data.Primitive.TArray.Classic
   build-depends:
     , base >=4.14.0.0 && <5
     , bytestring >=0.10.8.2 && <0.11
     , primitive >= 0.7 && <0.8
     , text-short >=0.1.3 && <0.2
+    , array
   hs-source-dirs: src
   ghc-options: -Wall -O2
   default-language: Haskell2010
