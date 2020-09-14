@@ -30,16 +30,14 @@ before_cache:
 
 matrix:
   include:
-    - compiler: "ghc-8.8.1"
+    - compiler: "ghc-8.10.1"
       env: GHCHEAD=true
-      addons: {apt: {packages: [ghc-ppa-tools,cabal-install-2.4,ghc-8.8.1], sources: [hvr-ghc]}}
-    - compiler: "ghc-8.6.5"
-      addons: {apt: {packages: [ghc-ppa-tools,cabal-install-2.4,ghc-8.6.5], sources: [hvr-ghc]}}
-    - compiler: "ghc-8.4.4"
-      addons: {apt: {packages: [ghc-ppa-tools,cabal-install-2.4,ghc-8.4.4], sources: [hvr-ghc]}}
-    - compiler: "ghc-head"
-      env: GHCHEAD=true
-      addons: {apt: {packages: [ghc-ppa-tools,cabal-install-head,ghc-head], sources: [hvr-ghc]}}
+      addons: {apt: {packages: [ghc-ppa-tools,cabal-install-3.2,ghc-8.10.1], sources: [hvr-ghc]}}
+
+# ghc-head seems totally hosed; maybe hvr has quit maintaining it?
+        #    - compiler: "ghc-head"
+        #env: GHCHEAD=true
+        #addons: {apt: {packages: [ghc-ppa-tools,cabal-install-head,ghc-head], sources: [hvr-ghc]}}
 
   allow_failures:
 
