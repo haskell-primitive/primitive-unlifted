@@ -12,10 +12,13 @@ import Data.Text.Short (ShortText,toShortByteString)
 import Data.Text.Short.Unsafe (fromShortByteStringUnsafe)
 import Data.Primitive.PrimArray (PrimArray(..),MutablePrimArray(..))
 import Data.Primitive.ByteArray (ByteArray(..),MutableByteArray(..))
+import Data.Primitive.Array (Array (..), MutableArray (..))
+import Data.Primitive.SmallArray (SmallArray (..), SmallMutableArray (..))
 import GHC.MVar (MVar(..))
 import GHC.IORef (IORef(..))
 import GHC.STRef (STRef(..))
-import GHC.Exts (State#,MutableByteArray#,ByteArray#,Int#)
+import GHC.Exts (State#,MutableByteArray#,ByteArray#,Int#
+                ,Array#,MutableArray#,SmallArray#,SmallMutableArray#)
 import GHC.Exts (ArrayArray#,MutableArrayArray#,RuntimeRep(UnliftedRep))
 import GHC.Exts (MVar#,MutVar#,RealWorld)
 import GHC.Exts (TYPE,unsafeCoerce#)
@@ -42,6 +45,54 @@ class PrimUnlifted a where
        ArrayArray#
     -> Int#
     -> a
+
+instance PrimUnlifted (Array a) where
+  {-# inline writeUnliftedArray# #-}
+  {-# inline readUnliftedArray# #-}
+  {-# inline indexUnliftedArray# #-}
+  type Unlifted (Array a) = Array# a
+  toUnlifted# (Array a) = a
+  fromUnlifted# x = Array x
+  writeUnliftedArray# a i (Array x) = Exts.writeArrayArrayArray# a i (arrToArrArr x)
+  readUnliftedArray# a i s0 = case Exts.readArrayArrayArray# a i s0 of
+    (# s1, x #) -> (# s1, Array (arrArrToArr x) #)
+  indexUnliftedArray# a i = Array (arrArrToArr (Exts.indexArrayArrayArray# a i))
+
+instance PrimUnlifted (MutableArray s a) where
+  {-# inline writeUnliftedArray# #-}
+  {-# inline readUnliftedArray# #-}
+  {-# inline indexUnliftedArray# #-}
+  type Unlifted (MutableArray s a) = MutableArray# s a
+  toUnlifted# (MutableArray a) = a
+  fromUnlifted# x = MutableArray x
+  writeUnliftedArray# a i (MutableArray x) = Exts.writeMutableArrayArrayArray# a i (mutArrToMutArrArr x)
+  readUnliftedArray# a i s0 = case Exts.readMutableArrayArrayArray# a i s0 of
+    (# s1, x #) -> (# s1, MutableArray (mutArrArrToMutArr x) #)
+  indexUnliftedArray# a i = MutableArray (arrArrToMutArr (Exts.indexArrayArrayArray# a i))
+
+instance PrimUnlifted (SmallArray a) where
+  {-# inline writeUnliftedArray# #-}
+  {-# inline readUnliftedArray# #-}
+  {-# inline indexUnliftedArray# #-}
+  type Unlifted (SmallArray a) = SmallArray# a
+  toUnlifted# (SmallArray a) = a
+  fromUnlifted# x = SmallArray x
+  writeUnliftedArray# a i (SmallArray x) = Exts.writeArrayArrayArray# a i (smallArrToArrArr x)
+  readUnliftedArray# a i s0 = case Exts.readArrayArrayArray# a i s0 of
+    (# s1, x #) -> (# s1, SmallArray (arrArrToSmallArr x) #)
+  indexUnliftedArray# a i = SmallArray (arrArrToSmallArr (Exts.indexArrayArrayArray# a i))
+
+instance PrimUnlifted (SmallMutableArray s a) where
+  {-# inline writeUnliftedArray# #-}
+  {-# inline readUnliftedArray# #-}
+  {-# inline indexUnliftedArray# #-}
+  type Unlifted (SmallMutableArray s a) = SmallMutableArray# s a
+  toUnlifted# (SmallMutableArray a) = a
+  fromUnlifted# x = SmallMutableArray x
+  writeUnliftedArray# a i (SmallMutableArray x) = Exts.writeMutableArrayArrayArray# a i (smallMutArrToMutArrArr x)
+  readUnliftedArray# a i s0 = case Exts.readMutableArrayArrayArray# a i s0 of
+    (# s1, x #) -> (# s1, SmallMutableArray (mutArrArrToSmallMutArr x) #)
+  indexUnliftedArray# a i = SmallMutableArray (arrArrToSmallMutArr (Exts.indexArrayArrayArray# a i))
 
 instance PrimUnlifted (PrimArray a) where
   {-# inline writeUnliftedArray# #-}
@@ -212,3 +263,33 @@ baToMba = unsafeCoerce#
 retoken :: MutableByteArray# s -> MutableByteArray# r
 {-# inline retoken #-}
 retoken = unsafeCoerce#
+
+arrToArrArr :: Array# a -> ArrayArray#
+arrToArrArr = unsafeCoerce#
+
+arrArrToArr :: ArrayArray# -> Array# a
+arrArrToArr = unsafeCoerce#
+
+mutArrToMutArrArr :: MutableArray# s a -> MutableArrayArray# r
+mutArrToMutArrArr = unsafeCoerce#
+
+mutArrArrToMutArr :: MutableArrayArray# s -> MutableArray# r a
+mutArrArrToMutArr = unsafeCoerce#
+
+arrArrToMutArr :: ArrayArray# -> MutableArray# s a
+arrArrToMutArr = unsafeCoerce#
+
+smallArrToArrArr :: SmallArray# a -> ArrayArray#
+smallArrToArrArr = unsafeCoerce#
+
+arrArrToSmallArr :: ArrayArray# -> SmallArray# a
+arrArrToSmallArr = unsafeCoerce#
+
+smallMutArrToMutArrArr :: SmallMutableArray# s a -> MutableArrayArray# r
+smallMutArrToMutArrArr = unsafeCoerce#
+
+mutArrArrToSmallMutArr :: MutableArrayArray# s -> SmallMutableArray# r a
+mutArrArrToSmallMutArr = unsafeCoerce#
+
+arrArrToSmallMutArr :: ArrayArray# -> SmallMutableArray# s a
+arrArrToSmallMutArr = unsafeCoerce#
