@@ -23,8 +23,10 @@ library
   exposed-modules:
     Data.Primitive.Unlifted.Class
     Data.Primitive.Unlifted.Array
+    Data.Primitive.Unlifted.Array.ST
     Data.Primitive.Unlifted.Array.Base
     Data.Primitive.Unlifted.BoxArray
+    Data.Primitive.Unlifted.BoxArray.ST
     Data.Primitive.Unlifted.Box
   build-depends:
     , base >=4.14.0.0 && <5

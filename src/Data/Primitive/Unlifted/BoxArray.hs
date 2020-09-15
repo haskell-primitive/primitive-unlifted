@@ -41,41 +41,45 @@ module Data.Primitive.Unlifted.BoxArray
     -- * Operations
   , newBoxArray
   , unsafeNewBoxArray
-  , sizeofBoxArray
-  , sizeofMutableBoxArray
-  , sameMutableBoxArray
+  , BA.sizeofBoxArray
+  , BA.sizeofMutableBoxArray
+  , BA.sameMutableBoxArray
   , writeBoxArray
   , readBoxArray
-  , indexBoxArray
+  , BA.indexBoxArray
   , unsafeFreezeBoxArray
   , freezeBoxArray
   , thawBoxArray
   , setBoxArray
   , copyBoxArray
   , copyMutableBoxArray
-  , cloneBoxArray
+  , BA.cloneBoxArray
   , cloneMutableBoxArray
-  , emptyBoxArray
-  , singletonBoxArray
-  , runBoxArray
+  , BA.emptyBoxArray
+  , BA.singletonBoxArray
+  , BA.runBoxArray
     -- * List Conversion
-  , unliftedArrayToList
-  , unliftedArrayFromList
-  , unliftedArrayFromListN
+  , BA.boxArrayToList
+  , BA.boxArrayFromList
+  , BA.boxArrayFromListN
     -- * Folding
-  , foldrBoxArray
-  , foldrBoxArray'
-  , foldlBoxArray
-  , foldlBoxArray'
-  , foldlBoxArrayM'
+  , BA.foldrBoxArray
+  , BA.foldrBoxArray'
+  , BA.foldlBoxArray
+  , BA.foldlBoxArray'
+  , BA.foldlBoxArrayM'
     -- * Traversals
-  , traverseBoxArray_
-  , itraverseBoxArray_
+  , BA.traverseBoxArray_
+  , BA.itraverseBoxArray_
     -- * Mapping
-  , mapBoxArray
+  , BA.mapBoxArray
   ) where
 
-import Control.Monad.Primitive (PrimMonad,PrimState,primitive,primitive_)
+import Data.Primitive.Unlifted.BoxArray.ST (BoxArray (..), MutableBoxArray (..))
+import qualified Data.Primitive.Unlifted.BoxArray.ST as BA
+import Control.Monad.Primitive (PrimMonad,PrimState,stToPrim)
+import Data.Primitive.Unlifted.Box (Box)
+{-
 import Control.Monad.ST (ST)
 import Data.Primitive.Unlifted.Class (PrimUnlifted (..))
 import Data.Primitive.Unlifted.Array.Base
@@ -103,6 +107,7 @@ instance PrimUnlifted (MutableBoxArray s a) where
   type Unlifted (MutableBoxArray s a) = MutableUnliftedArray# s a
   toUnlifted# (MutableBoxArray a) = a
   fromUnlifted# x = MutableBoxArray x
+-}
 
 -- | Creates a new 'MutableBoxArray' with the specified value as initial
 -- contents.
@@ -111,8 +116,7 @@ newBoxArray
   => Int -- ^ size
   -> Box a -- ^ initial value
   -> m (MutableBoxArray (PrimState m) a)
-newBoxArray (I# len) (Box v) = primitive $ \s -> case newUnliftedArray# len v s of
-  (# s', ma #) -> (# s', MutableBoxArray ma #)
+newBoxArray len v = stToPrim (BA.newBoxArray len v)
 {-# inline newBoxArray #-}
 
 setBoxArray
@@ -123,22 +127,7 @@ setBoxArray
   -> Int -- ^ length
   -> m ()
 {-# inline setBoxArray #-}
-setBoxArray mua v off len = loop (len + off - 1)
- where
- loop i
-   | i < off = pure ()
-   | otherwise = writeBoxArray mua i v *> loop (i-1)
-
--- | Yields the length of an 'BoxArray'.
-sizeofBoxArray :: BoxArray e -> Int
-{-# inline sizeofBoxArray #-}
-sizeofBoxArray (BoxArray ar) = I# (sizeofUnliftedArray# ar)
-
--- | Yields the length of a 'MutableBoxArray'.
-sizeofMutableBoxArray :: MutableBoxArray s e -> Int
-{-# inline sizeofMutableBoxArray #-}
-sizeofMutableBoxArray (MutableBoxArray maa#)
-  = I# (sizeofMutableUnliftedArray# maa#)
+setBoxArray mua v off len = stToPrim $ BA.setBoxArray mua v off len
 
 writeBoxArray :: PrimMonad m
   => MutableBoxArray (PrimState m) a
@@ -146,24 +135,14 @@ writeBoxArray :: PrimMonad m
   -> Box a
   -> m ()
 {-# inline writeBoxArray #-}
-writeBoxArray (MutableBoxArray arr) (I# ix) (Box a) =
-  primitive_ (writeUnliftedArray# arr ix a)
+writeBoxArray ar x b = stToPrim $ BA.writeBoxArray ar x b
 
 readBoxArray :: PrimMonad m
   => MutableBoxArray (PrimState m) a
   -> Int
   -> m (Box a)
 {-# inline readBoxArray #-}
-readBoxArray (MutableBoxArray arr) (I# ix) =
-  primitive $ \s -> case readUnliftedArray# arr ix s of
-    (# s', a #) -> (# s', Box a #)
-
-indexBoxArray :: BoxArray a
-  -> Int
-  -> Box a
-{-# inline indexBoxArray #-}
-indexBoxArray (BoxArray arr) (I# ix) =
-  Box (indexUnliftedArray# arr ix)
+readBoxArray arr ix = stToPrim $ BA.readBoxArray arr ix
 
 -- | Freezes a 'MutableBoxArray', yielding an 'BoxArray'. This simply
 -- marks the array as frozen in place, so it should only be used when no further
@@ -172,24 +151,12 @@ unsafeFreezeBoxArray
   :: PrimMonad m
   => MutableBoxArray (PrimState m) a
   -> m (BoxArray a)
-unsafeFreezeBoxArray (MutableBoxArray maa#)
-  = primitive $ \s -> case unsafeFreezeUnliftedArray# maa# s of
-      (# s', aa# #) -> (# s', BoxArray aa# #)
+unsafeFreezeBoxArray ma = stToPrim $ BA.unsafeFreezeBoxArray ma
 {-# inline unsafeFreezeBoxArray #-}
-
--- | Determines whether two 'MutableBoxArray' values are the same. This is
--- object/pointer identity, not based on the contents.
-sameMutableBoxArray
-  :: MutableBoxArray s a
-  -> MutableBoxArray s a
-  -> Bool
-sameMutableBoxArray (MutableBoxArray maa1#) (MutableBoxArray maa2#)
-  = Exts.isTrue# (sameMutableUnliftedArray# maa1# maa2#)
-{-# inline sameMutableBoxArray #-}
 
 -- | Copies the contents of an immutable array into a mutable array.
 copyBoxArray
-  :: (PrimMonad m)
+  :: PrimMonad m
   => MutableBoxArray (PrimState m) a -- ^ destination
   -> Int -- ^ offset into destination
   -> BoxArray a -- ^ source
@@ -197,14 +164,11 @@ copyBoxArray
   -> Int -- ^ number of elements to copy
   -> m ()
 {-# inline copyBoxArray #-}
-copyBoxArray
-  (MutableBoxArray dst) (I# doff)
-  (BoxArray src) (I# soff) (I# ln) =
-    primitive_ $ copyUnliftedArray# src soff dst doff ln
+copyBoxArray dst doff src soff ln = stToPrim $ BA.copyBoxArray dst doff src soff ln
 
 -- | Copies the contents of one mutable array into another.
 copyMutableBoxArray
-  :: (PrimMonad m)
+  :: PrimMonad m
   => MutableBoxArray (PrimState m) a -- ^ destination
   -> Int -- ^ offset into destination
   -> MutableBoxArray (PrimState m) a -- ^ source
@@ -212,285 +176,52 @@ copyMutableBoxArray
   -> Int -- ^ number of elements to copy
   -> m ()
 {-# inline copyMutableBoxArray #-}
-copyMutableBoxArray
-  (MutableBoxArray dst) (I# doff)
-  (MutableBoxArray src) (I# soff) (I# ln) =
-    primitive_ $ copyMutableUnliftedArray# src soff dst doff ln
+copyMutableBoxArray dst doff src soff ln
+  = stToPrim $ BA.copyMutableBoxArray dst doff src soff ln
 
 -- | Freezes a portion of a 'MutableBoxArray', yielding an 'BoxArray'.
 -- This operation is safe, in that it copies the frozen portion, and the
 -- existing mutable array may still be used afterward.
 freezeBoxArray
-  :: (PrimMonad m)
+  :: PrimMonad m
   => MutableBoxArray (PrimState m) a -- ^ source
   -> Int -- ^ offset
   -> Int -- ^ length
   -> m (BoxArray a)
-freezeBoxArray (MutableBoxArray mary) (I# off) (I# len) =
-    primitive $ \s -> case freezeUnliftedArray# mary off len s of
-      (# s', ary #) -> (# s', BoxArray ary #)
+freezeBoxArray mary off len = stToPrim $ BA.freezeBoxArray mary off len
 {-# inline freezeBoxArray #-}
 
 -- | Thaws a portion of an 'BoxArray', yielding a 'MutableBoxArray'.
 -- This copies the thawed portion, so mutations will not affect the original
 -- array.
 thawBoxArray
-  :: (PrimMonad m)
+  :: PrimMonad m
   => BoxArray a -- ^ source
   -> Int -- ^ offset
   -> Int -- ^ length
   -> m (MutableBoxArray (PrimState m) a)
 {-# inline thawBoxArray #-}
-thawBoxArray (BoxArray ary) (I# off) (I# len) =
-    primitive $ \s -> case thawUnliftedArray# ary off len s of
-      (# s', mary #) -> (# s', MutableBoxArray mary #)
-
--- | Execute a stateful computation and freeze the resulting array.
-runBoxArray
-  :: (forall s. ST s (MutableBoxArray s a))
-  -> BoxArray a
-{-# INLINE runBoxArray #-}
--- This is what we'd like to write, but GHC does not yet
--- produce properly unboxed code when we do
--- runBoxArray m = runST $ m >>= unsafeFreezeBoxArray
-runBoxArray m = BoxArray (runUnliftedArray# m)
-
-runUnliftedArray#
-  :: (forall s. ST s (MutableBoxArray s a))
-  -> UnliftedArray# a
-runUnliftedArray# m = case Exts.runRW# $ \s ->
-  case unST m s of { (# s', MutableBoxArray mary# #) ->
-  unsafeFreezeUnliftedArray# mary# s'} of (# _, ary# #) -> ary#
-{-# INLINE runUnliftedArray# #-}
-
-unST :: ST s a -> State# s -> (# State# s, a #)
-unST (ST.ST f) = f
-
-unsafeCreateBoxArray
-  :: Int
-  -> (forall s. MutableBoxArray s a -> ST s ())
-  -> BoxArray a
-unsafeCreateBoxArray !n f = runBoxArray $ do
-  mary <- unsafeNewBoxArray n
-  f mary
-  pure mary
+thawBoxArray ary off len = stToPrim $ BA.thawBoxArray ary off len
 
 -- | Creates a new 'MutableBoxArray'. This function is unsafe because it
 -- initializes all elements of the array as pointers to the empty array. Attempting
 -- to read one of these elements before writing to it is in effect an unsafe
 -- coercion from @'BoxArray' a@ to the element type.
 unsafeNewBoxArray
-  :: (PrimMonad m)
+  :: PrimMonad m
   => Int -- ^ size
   -> m (MutableBoxArray (PrimState m) a)
 {-# inline unsafeNewBoxArray #-}
-unsafeNewBoxArray (I# i) = primitive $ \s -> case unsafeNewUnliftedArray# i s of
-  (# s', ma #) -> (# s', MutableBoxArray ma #)
-
-
--- | Creates a copy of a portion of an 'BoxArray'
-cloneBoxArray
-  :: BoxArray a -- ^ source
-  -> Int -- ^ offset
-  -> Int -- ^ length
-  -> BoxArray a
-{-# inline cloneBoxArray #-}
-cloneBoxArray (BoxArray ary) (I# off) (I# len)
-  = BoxArray (cloneUnliftedArray# ary off len)
+unsafeNewBoxArray i = stToPrim $ BA.unsafeNewBoxArray i
 
 -- | Creates a new 'MutableBoxArray' containing a copy of a portion of
 -- another mutable array.
 cloneMutableBoxArray
-  :: (PrimMonad m)
+  :: PrimMonad m
   => MutableBoxArray (PrimState m) a -- ^ source
   -> Int -- ^ offset
   -> Int -- ^ length
   -> m (MutableBoxArray (PrimState m) a)
 {-# inline cloneMutableBoxArray #-}
-cloneMutableBoxArray (MutableBoxArray mary) (I# off) (I# len)
-  = primitive $ \s -> case cloneMutableUnliftedArray# mary off len s of
-      (# s', mary' #) -> (# s', MutableBoxArray mary' #)
-
-emptyBoxArray :: BoxArray a
-emptyBoxArray = BoxArray (emptyUnliftedArray# Exts.void#)
-
-singletonBoxArray :: Box a -> BoxArray a
-{-# INLINE singletonBoxArray #-}
-singletonBoxArray x = runBoxArray $ newBoxArray 1 x
-
-concatBoxArray :: BoxArray a -> BoxArray a -> BoxArray a
-{-# INLINE concatBoxArray #-}
-concatBoxArray (BoxArray a1) (BoxArray a2)
-  = BoxArray (concatUnliftedArray# a1 a2)
-
--- This junk is to make sure we unbox properly. Inlining this doesn't seem
--- likely to be much of a win ever, and could potentially lead to reboxing,
--- so we NOINLINE. It would be nice to find a prettier way to do this.
-concatUnliftedArray# :: UnliftedArray# a -> UnliftedArray# a -> UnliftedArray# a
-{-# NOINLINE concatUnliftedArray# #-}
-concatUnliftedArray# a1 a2 =
-  let !sza1 = sizeofUnliftedArray# a1
-  in
-    if Exts.isTrue# (sza1 Exts.==# 0#)
-    then a2
-    else
-      let !sza2 = sizeofUnliftedArray# a2
-      in
-        if Exts.isTrue# (sza2 Exts.==# 0#)
-        then a1
-        else Exts.runRW# $ \s ->
-          case unsafeNewUnliftedArray# (sza1 Exts.+# sza2) s of { (# s', ma #) ->
-          case copyUnliftedArray# a1 0# ma 0# sza1 s' of { s'' ->
-          case copyUnliftedArray# a2 0# ma sza1 sza2 s'' of { s''' ->
-          case unsafeFreezeUnliftedArray# ma s''' of
-            (# _, ar #) -> ar}}}
-
-foldrBoxArray :: forall a b. (Box a -> b -> b) -> b -> BoxArray a -> b
-{-# INLINE foldrBoxArray #-}
-foldrBoxArray f z arr = go 0
-  where
-    !sz = sizeofBoxArray arr
-    go !i
-      | sz > i = f (indexBoxArray arr i) (go (i+1))
-      | otherwise = z
-
--- | Strict right-associated fold over the elements of an 'BoxArray.
-{-# INLINE foldrBoxArray' #-}
-foldrBoxArray' :: forall a b. (Box a -> b -> b) -> b -> BoxArray a -> b
-foldrBoxArray' f z0 arr = go (sizeofBoxArray arr - 1) z0
-  where
-    go !i !acc
-      | i < 0 = acc
-      | otherwise = go (i - 1) (f (indexBoxArray arr i) acc)
-
--- | Lazy left-associated fold over the elements of an 'BoxArray'.
-{-# INLINE foldlBoxArray #-}
-foldlBoxArray :: forall a b. (b -> Box a -> b) -> b -> BoxArray a -> b
-foldlBoxArray f z arr = go (sizeofBoxArray arr - 1)
-  where
-    go !i
-      | i < 0 = z
-      | otherwise = f (go (i - 1)) (indexBoxArray arr i)
-
--- | Strict left-associated fold over the elements of an 'BoxArray'.
-{-# INLINE foldlBoxArray' #-}
-foldlBoxArray' :: forall a b. (b -> Box a -> b) -> b -> BoxArray a -> b
-foldlBoxArray' f z0 arr = go 0 z0
-  where
-    !sz = sizeofBoxArray arr
-    go !i !acc
-      | i < sz = go (i + 1) (f acc (indexBoxArray arr i))
-      | otherwise = acc
-
--- | Strict effectful left-associated fold over the elements of an 'BoxArray'.
-{-# INLINE foldlBoxArrayM' #-}
-foldlBoxArrayM' :: Monad m
-  => (b -> Box a -> m b) -> b -> BoxArray a -> m b
-foldlBoxArrayM' f z0 arr = go 0 z0
-  where
-    !sz = sizeofBoxArray arr
-    go !i !acc
-      | i < sz = f acc (indexBoxArray arr i) >>= go (i + 1) 
-      | otherwise = pure acc
-
--- | Effectfully traverse the elements of an 'BoxArray', discarding
--- the resulting values.
-{-# INLINE traverseBoxArray_ #-}
-traverseBoxArray_ :: Applicative m
-  => (Box a -> m b) -> BoxArray a -> m ()
-traverseBoxArray_ f arr = go 0
-  where
-    !sz = sizeofBoxArray arr
-    go !i
-      | i < sz = f (indexBoxArray arr i) *> go (i + 1) 
-      | otherwise = pure ()
-
--- | Effectful indexed traversal of the elements of an 'BoxArray',
--- discarding the resulting values.
-{-# INLINE itraverseBoxArray_ #-}
-itraverseBoxArray_ :: Applicative m
-  => (Int -> Box a -> m b) -> BoxArray a -> m ()
-itraverseBoxArray_ f arr = go 0
-  where
-    !sz = sizeofBoxArray arr
-    go !i
-      | i < sz = f i (indexBoxArray arr i) *> go (i + 1) 
-      | otherwise = pure ()
-
--- | Map over the elements of an 'BoxArray'.
-{-# INLINE mapBoxArray #-}
-mapBoxArray ::
-     (Box a -> Box b)
-  -> BoxArray a
-  -> BoxArray b
-mapBoxArray f arr = unsafeCreateBoxArray sz $ \marr -> do
-  let go !ix = if ix < sz
-        then do
-          let b = f (indexBoxArray arr ix)
-          writeBoxArray marr ix b
-          go (ix + 1)
-        else return ()
-  go 0
-  where
-  !sz = sizeofBoxArray arr
-
--- | Convert the unlifted array to a list.
-{-# INLINE unliftedArrayToList #-}
-unliftedArrayToList :: BoxArray a -> [Box a]
-unliftedArrayToList xs = Exts.build (\c n -> foldrBoxArray c n xs)
-
-unliftedArrayFromList :: [Box a] -> BoxArray a
-unliftedArrayFromList xs = unliftedArrayFromListN (L.length xs) xs
-
-unliftedArrayFromListN :: forall a. Int -> [Box a] -> BoxArray a
-unliftedArrayFromListN len vs = unsafeCreateBoxArray len run where
-  run :: forall s. MutableBoxArray s a -> ST s ()
-  run arr = do
-    let go :: [Box a] -> Int -> ST s ()
-        go [] !ix = if ix == len
-          -- The size check is mandatory since failure to initialize all elements
-          -- introduces the possibility of a segfault happening when someone attempts
-          -- to read the unitialized element. See the docs for unsafeNewBoxArray.
-          then return ()
-          else die "unliftedArrayFromListN" "list length less than specified size"
-        go (a : as) !ix = if ix < len
-          then do
-            writeBoxArray arr ix a
-            go as (ix + 1)
-          else die "unliftedArrayFromListN" "list length greater than specified size"
-    go vs 0
-
-instance Exts.IsList (BoxArray a) where
-  type Item (BoxArray a) = Box a
-  fromList = unliftedArrayFromList
-  fromListN = unliftedArrayFromListN
-  toList = unliftedArrayToList
-
-instance Semigroup (BoxArray a) where
-  (<>) = concatBoxArray
-
-instance Monoid (BoxArray a) where
-  mempty = emptyBoxArray
-
-instance Eq (MutableBoxArray s a) where
-  (==) = sameMutableBoxArray
-
-die :: String -> String -> a
-die fun problem = error $ "Data.Primitive.Unlifted.BoxArray." ++ fun ++ ": " ++ problem
-
-{-
--- TODO: Work out Show, Eq, and Ord instances for appropriate types.
-
-instance (Show a, ???) => Show (BoxArray a) where
-  showsPrec p a = showParen (p > 10) $
-    showString "fromListN " . shows (sizeofBoxArray a) . showString " "
-      . shows (unliftedArrayToList a)
-
-instance ??? => Eq (BoxArray a) where
-  aa1 == aa2 = sizeofBoxArray aa1 == sizeofBoxArray aa2
-            && loop (sizeofBoxArray aa1 - 1)
-   where
-   loop i
-     | i < 0 = True
-     | otherwise = indexBoxArray aa1 i == indexBoxArray aa2 i && loop (i-1)
--}
+cloneMutableBoxArray mary off len
+  = stToPrim $ BA.cloneMutableBoxArray mary off len
