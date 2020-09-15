@@ -24,6 +24,8 @@ library
     Data.Primitive.Unlifted.Class
     Data.Primitive.Unlifted.Array
     Data.Primitive.Unlifted.Array.Base
+    Data.Primitive.Unlifted.BoxArray
+    Data.Primitive.Unlifted.Box
   build-depends:
     , base >=4.14.0.0 && <5
     , bytestring >=0.10.8.2 && <0.11

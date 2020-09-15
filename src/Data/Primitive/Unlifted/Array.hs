@@ -466,10 +466,10 @@ instance PrimUnlifted a => Exts.IsList (UnliftedArray a) where
   fromListN = unliftedArrayFromListN
   toList = unliftedArrayToList
 
-instance PrimUnlifted a => Semigroup (UnliftedArray a) where
+instance Semigroup (UnliftedArray a) where
   (<>) = concatUnliftedArray
 
-instance PrimUnlifted a => Monoid (UnliftedArray a) where
+instance Monoid (UnliftedArray a) where
   mempty = emptyUnliftedArray
 
 instance (Show a, PrimUnlifted a) => Show (UnliftedArray a) where
