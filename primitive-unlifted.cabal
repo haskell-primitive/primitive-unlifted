@@ -23,6 +23,9 @@ library
   exposed-modules:
     Data.Primitive.Unlifted.Class
     Data.Primitive.Unlifted.Array
+    Data.Primitive.Unlifted.SmallArray
+    Data.Primitive.Unlifted.SmallArray.ST
+    Data.Primitive.Unlifted.SmallArray.Base
     Data.Primitive.Unlifted.Array.ST
     Data.Primitive.Unlifted.Array.Base
     Data.Primitive.Unlifted.Box
