@@ -19,10 +19,11 @@ import GHC.MVar (MVar(..))
 import GHC.IORef (IORef(..))
 import GHC.STRef (STRef(..))
 import GHC.Weak (Weak(..))
-import GHC.Conc (TVar(..))
+import GHC.Conc (TVar(..),ThreadId(..))
+import GHC.StableName (StableName(..))
 import GHC.Exts (MutableByteArray#,ByteArray#
                 ,Array#,MutableArray#,SmallArray#,SmallMutableArray#
-                ,Weak#,TVar#)
+                ,Weak#,TVar#,ThreadId#,StableName#)
 import GHC.Exts (RuntimeRep(UnliftedRep))
 import GHC.Exts (MVar#,MutVar#,RealWorld)
 import GHC.Exts (TYPE)
@@ -119,3 +120,13 @@ instance PrimUnlifted (TVar a) where
   type Unlifted (TVar a) = TVar# Exts.RealWorld a
   toUnlifted# (TVar t) = t
   fromUnlifted# t = TVar t
+
+instance PrimUnlifted ThreadId where
+  type Unlifted ThreadId = ThreadId#
+  toUnlifted# (ThreadId tid) = tid
+  fromUnlifted# tid = ThreadId tid
+
+instance PrimUnlifted (StableName a) where
+  type Unlifted (StableName a) = StableName# a
+  toUnlifted# (StableName sn) = sn
+  fromUnlifted# sn = StableName sn
