@@ -60,6 +60,7 @@ module Data.Primitive.Unlifted.Array.ST
   , emptyUnliftedArray
   , singletonUnliftedArray
   , runUnliftedArray
+  , dupableRunUnliftedArray
     -- * List Conversion
   , unliftedArrayToList
   , unliftedArrayFromList
@@ -263,10 +264,31 @@ runUnliftedArray m = UnliftedArray (runUnliftedArray# m)
 runUnliftedArray#
   :: (forall s. ST s (MutableUnliftedArray s a))
   -> UnliftedArray# (Unlifted a)
-runUnliftedArray# m = case Exts.runRW# $ \s ->
+runUnliftedArray# m = case Exts.runRW# $ \s0 ->
+  case Exts.noDuplicate# s0 of { s ->
+  case unST m s of { (# s', MutableUnliftedArray mary# #) ->
+  unsafeFreezeUnliftedArray# mary# s'}} of (# _, ary# #) -> ary#
+{-# INLINE runUnliftedArray# #-}
+
+-- | Execute a stateful computation and freeze the resulting array.
+-- It is possible, but unlikely, that the computation will be run
+-- multiple times in multiple threads.
+dupableRunUnliftedArray
+  :: (forall s. ST s (MutableUnliftedArray s a))
+  -> UnliftedArray a
+{-# INLINE dupableRunUnliftedArray #-}
+-- This is what we'd like to write, but GHC does not yet
+-- produce properly unboxed code when we do
+-- runUnliftedArray m = runST $ m >>= unsafeFreezeUnliftedArray
+dupableRunUnliftedArray m = UnliftedArray (dupableRunUnliftedArray# m)
+
+dupableRunUnliftedArray#
+  :: (forall s. ST s (MutableUnliftedArray s a))
+  -> UnliftedArray# (Unlifted a)
+dupableRunUnliftedArray# m = case Exts.runRW# $ \s ->
   case unST m s of { (# s', MutableUnliftedArray mary# #) ->
   unsafeFreezeUnliftedArray# mary# s'} of (# _, ary# #) -> ary#
-{-# INLINE runUnliftedArray# #-}
+{-# INLINE dupableRunUnliftedArray# #-}
 
 unST :: ST s a -> State# s -> (# State# s, a #)
 unST (ST f) = f
@@ -319,7 +341,7 @@ emptyUnliftedArray = UnliftedArray (emptyUnliftedArray# Exts.void#)
 
 singletonUnliftedArray :: PrimUnlifted a => a -> UnliftedArray a
 {-# INLINE singletonUnliftedArray #-}
-singletonUnliftedArray x = runUnliftedArray $ newUnliftedArray 1 x
+singletonUnliftedArray x = dupableRunUnliftedArray $ newUnliftedArray 1 x
 
 concatUnliftedArray :: UnliftedArray a -> UnliftedArray a -> UnliftedArray a
 {-# INLINE concatUnliftedArray #-}
@@ -341,12 +363,26 @@ concatUnliftedArray# a1 a2 =
       in
         if Exts.isTrue# (sza2 Exts.==# 0#)
         then a1
-        else Exts.runRW# $ \s ->
-          case unsafeNewUnliftedArray# (sza1 Exts.+# sza2) s of { (# s', ma #) ->
-          case copyUnliftedArray# a1 0# ma 0# sza1 s' of { s'' ->
-          case copyUnliftedArray# a2 0# ma sza1 sza2 s'' of { s''' ->
-          case unsafeFreezeUnliftedArray# ma s''' of
-            (# _, ar #) -> ar}}}
+        else Exts.runRW# $ \s0 ->
+          let
+            finish s =
+              case unsafeNewUnliftedArray# (sza1 Exts.+# sza2) s of { (# s', ma #) ->
+              case copyUnliftedArray# a1 0# ma 0# sza1 s' of { s'' ->
+              case copyUnliftedArray# a2 0# ma sza1 sza2 s'' of { s''' ->
+              case unsafeFreezeUnliftedArray# ma s''' of
+                (# _, ar #) -> ar}}}
+            -- GHC wants to inline this, but I very much doubt it's worth the
+            -- extra code, considering that it calls multiple out-of-line
+            -- primops.
+            {-# NOINLINE finish #-}
+          in
+            -- When the final array will be "small", we tolerate the possibility that
+            -- it could be constructed multiple times in different threads. Currently,
+            -- "small" means fewer than 1000 elements. This is a totally arbitrary
+            -- cutoff that has not been tuned whatsoever.
+            if Exts.isTrue# ((sza1 Exts.+# sza2) Exts.>=# 1000#)
+            then finish (Exts.noDuplicate# s0)
+            else finish s0
 
 foldrUnliftedArray :: forall a b. PrimUnlifted a => (a -> b -> b) -> b -> UnliftedArray a -> b
 {-# INLINE foldrUnliftedArray #-}
@@ -426,6 +462,16 @@ mapUnliftedArray :: (PrimUnlifted a, PrimUnlifted b)
   => (a -> b)
   -> UnliftedArray a
   -> UnliftedArray b
+-- TODO: Do we need unsafeCreateUnliftedArray here, or would it be better
+-- to use a hypothetical unsafeDupableCreateUnliftedArray? I don't have
+-- much intuition for this. On one hand, if the operation creates a
+-- bunch of expensive objects to stick in the array, then we really don't want
+-- to duplicate that work. On the other hand, it's likely that creating
+-- a bunch of expensive objects will also allocate a bunch of memory, which
+-- will likely trigger garbage collection that (as I understand it) will
+-- notice that one thunk is being evaluated twice and deduplicate. On the
+-- other other hand, I don't think there's no guarantee that the thread that wins will be
+-- the one that's further along, so maybe the noDuplicate is for the best.
 mapUnliftedArray f arr = unsafeCreateUnliftedArray sz $ \marr -> do
   let go !ix = if ix < sz
         then do

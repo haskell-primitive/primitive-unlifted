@@ -60,6 +60,7 @@ module Data.Primitive.Unlifted.Array
   , A.emptyUnliftedArray
   , A.singletonUnliftedArray
   , A.runUnliftedArray
+  , A.dupableRunUnliftedArray
     -- * List Conversion
   , A.unliftedArrayToList
   , A.unliftedArrayFromList
