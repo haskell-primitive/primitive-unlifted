@@ -53,6 +53,7 @@ module Data.Primitive.Unlifted.SmallArray.ST
   , unsafeFreezeSmallUnliftedArray
   , freezeSmallUnliftedArray
   , thawSmallUnliftedArray
+  , unsafeThawSmallUnliftedArray
   , setSmallUnliftedArray
   , copySmallUnliftedArray
   , copySmallMutableUnliftedArray
@@ -246,7 +247,7 @@ freezeSmallUnliftedArray (SmallMutableUnliftedArray mary) (I# off) (I# len) =
       (# s', ary #) -> (# s', SmallUnliftedArray ary #)
 {-# inline freezeSmallUnliftedArray #-}
 
--- | Thaws a portion of an 'UnliftedArray', yielding a 'MutableUnliftedArray'.
+-- | Thaws a portion of a 'SmallUnliftedArray', yielding a 'SmallMutableUnliftedArray'.
 -- This copies the thawed portion, so mutations will not affect the original
 -- array.
 thawSmallUnliftedArray
@@ -257,6 +258,16 @@ thawSmallUnliftedArray
 {-# inline thawSmallUnliftedArray #-}
 thawSmallUnliftedArray (SmallUnliftedArray ary) (I# off) (I# len) =
     ST $ \s -> case thawSmallUnliftedArray# ary off len s of
+      (# s', mary #) -> (# s', SmallMutableUnliftedArray mary #)
+
+-- | Thaws a 'SmallUnliftedArray', yielding a 'SmallMutableUnliftedArray'.
+-- This does not make a copy.
+unsafeThawSmallUnliftedArray
+  :: SmallUnliftedArray a -- ^ source
+  -> ST s (SmallMutableUnliftedArray s a)
+{-# inline unsafeThawSmallUnliftedArray #-}
+unsafeThawSmallUnliftedArray (SmallUnliftedArray ary) =
+    ST $ \s -> case unsafeThawSmallUnliftedArray# ary s of
       (# s', mary #) -> (# s', SmallMutableUnliftedArray mary #)
 
 -- | Execute a stateful computation and freeze the resulting array.

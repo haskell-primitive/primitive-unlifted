@@ -116,8 +116,8 @@ shrinkSmallMutableUnliftedArray# (SmallMutableUnliftedArray# ar) sz s
 
 readSmallUnliftedArray# :: SmallMutableUnliftedArray# s a -> Int# -> State# s -> (# State# s, a #)
 readSmallUnliftedArray# (SmallMutableUnliftedArray# mary) i s
-  = case Exts.readSmallArray# mary i s
-      of (# s', a #) -> (# s', unsafeCoerce# a #)
+  = unsafeCoerce# (Exts.readSmallArray# mary i s)
+--      of (# s', a #) -> (# s', unsafeCoerce# a #)
 {-# INLINE readSmallUnliftedArray# #-}
 
 writeSmallUnliftedArray# :: SmallMutableUnliftedArray# s a -> Int# -> a -> State# s -> State# s
@@ -195,6 +195,5 @@ thawSmallUnliftedArray# (SmallUnliftedArray# ary) i n s
 
 casSmallUnliftedArray# :: SmallMutableUnliftedArray# s a -> Int# -> a -> a -> State# s -> (# State# s, Int#, a #)
 casSmallUnliftedArray# (SmallMutableUnliftedArray# mary) i x y s
-  = case Exts.casSmallArray# mary i (unsafeCoerce# x) (unsafeCoerce# y) s of
-      (# s', sf, a #) -> (# s', sf, unsafeCoerce# a #)
+  = unsafeCoerce# (Exts.casSmallArray# mary i (unsafeCoerce# x) (unsafeCoerce# y) s)
 {-# INLINE casSmallUnliftedArray# #-}

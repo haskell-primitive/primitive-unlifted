@@ -53,6 +53,7 @@ module Data.Primitive.Unlifted.SmallArray
   , unsafeFreezeSmallUnliftedArray
   , freezeSmallUnliftedArray
   , thawSmallUnliftedArray
+  , unsafeThawSmallUnliftedArray
   , setSmallUnliftedArray
   , copySmallUnliftedArray
   , copySmallMutableUnliftedArray
@@ -160,7 +161,7 @@ copySmallMutableUnliftedArray
 {-# inline copySmallMutableUnliftedArray #-}
 copySmallMutableUnliftedArray dst doff src soff ln = stToPrim $ A.copySmallMutableUnliftedArray dst doff src soff ln
 
--- | Freezes a portion of a 'MutableUnliftedArray', yielding an 'UnliftedArray'.
+-- | Freezes a portion of a 'SmallMutableUnliftedArray', yielding a 'SmallUnliftedArray'.
 -- This operation is safe, in that it copies the frozen portion, and the
 -- existing mutable array may still be used afterward.
 freezeSmallUnliftedArray
@@ -172,7 +173,7 @@ freezeSmallUnliftedArray
 freezeSmallUnliftedArray mary off len = stToPrim $ A.freezeSmallUnliftedArray mary off len
 {-# inline freezeSmallUnliftedArray #-}
 
--- | Thaws a portion of an 'UnliftedArray', yielding a 'MutableUnliftedArray'.
+-- | Thaws a portion of a 'SmallUnliftedArray', yielding a 'SmallMutableUnliftedArray'.
 -- This copies the thawed portion, so mutations will not affect the original
 -- array.
 thawSmallUnliftedArray
@@ -183,6 +184,15 @@ thawSmallUnliftedArray
   -> m (SmallMutableUnliftedArray (PrimState m) a)
 {-# inline thawSmallUnliftedArray #-}
 thawSmallUnliftedArray ary off len = stToPrim $ A.thawSmallUnliftedArray ary off len
+
+-- | Thaw a 'SmallUnliftedArray', yielding a 'SmallMutableUnliftedArray'.
+-- This does not make a copy.
+unsafeThawSmallUnliftedArray
+  :: PrimMonad m
+  => SmallUnliftedArray a -- ^ source
+  -> m (SmallMutableUnliftedArray (PrimState m) a)
+{-# inline unsafeThawSmallUnliftedArray #-}
+unsafeThawSmallUnliftedArray ary = stToPrim $ A.unsafeThawSmallUnliftedArray ary
 
 -- | Creates a new 'MutableUnliftedArray'. This function is unsafe because it
 -- initializes all elements of the array as pointers to the empty array. Attempting

@@ -52,6 +52,7 @@ module Data.Primitive.Unlifted.Array.ST
   , unsafeFreezeUnliftedArray
   , freezeUnliftedArray
   , thawUnliftedArray
+  , unsafeThawUnliftedArray
   , setUnliftedArray
   , copyUnliftedArray
   , copyMutableUnliftedArray
@@ -249,6 +250,16 @@ thawUnliftedArray
 {-# inline thawUnliftedArray #-}
 thawUnliftedArray (UnliftedArray ary) (I# off) (I# len) =
     ST $ \s -> case thawUnliftedArray# ary off len s of
+      (# s', mary #) -> (# s', MutableUnliftedArray mary #)
+
+-- | Thaws an 'UnliftedArray', yielding a 'MutableUnliftedArray'. This
+-- does not make a copy.
+unsafeThawUnliftedArray
+  :: UnliftedArray a -- ^ source
+  -> ST s (MutableUnliftedArray s a)
+{-# inline unsafeThawUnliftedArray #-}
+unsafeThawUnliftedArray (UnliftedArray ary) =
+    ST $ \s -> case unsafeThawUnliftedArray# ary s of
       (# s', mary #) -> (# s', MutableUnliftedArray mary #)
 
 -- | Execute a stateful computation and freeze the resulting array.

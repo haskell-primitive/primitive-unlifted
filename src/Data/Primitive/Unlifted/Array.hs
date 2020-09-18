@@ -52,6 +52,7 @@ module Data.Primitive.Unlifted.Array
   , unsafeFreezeUnliftedArray
   , freezeUnliftedArray
   , thawUnliftedArray
+  , unsafeThawUnliftedArray
   , setUnliftedArray
   , copyUnliftedArray
   , copyMutableUnliftedArray
@@ -175,6 +176,15 @@ thawUnliftedArray
   -> m (MutableUnliftedArray (PrimState m) a)
 {-# inline thawUnliftedArray #-}
 thawUnliftedArray ary off len = stToPrim $ A.thawUnliftedArray ary off len
+
+-- | Thaws an 'UnliftedArray', yielding a 'MutableUnliftedArray'.
+-- This does not make a copy.
+unsafeThawUnliftedArray
+  :: PrimMonad m
+  => UnliftedArray a -- ^ source
+  -> m (MutableUnliftedArray (PrimState m) a)
+{-# inline unsafeThawUnliftedArray #-}
+unsafeThawUnliftedArray ary = stToPrim $ A.unsafeThawUnliftedArray ary
 
 -- | Creates a new 'MutableUnliftedArray'. This function is unsafe because it
 -- initializes all elements of the array as pointers to the empty array. Attempting

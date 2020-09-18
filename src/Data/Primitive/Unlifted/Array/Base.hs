@@ -108,8 +108,7 @@ sameMutableUnliftedArray# (MutableUnliftedArray# ar1) (MutableUnliftedArray# ar2
 
 readUnliftedArray# :: MutableUnliftedArray# s a -> Int# -> State# s -> (# State# s, a #)
 readUnliftedArray# (MutableUnliftedArray# mary) i s
-  = case Exts.readArray# mary i s
-      of (# s', a #) -> (# s', unsafeCoerce# a #)
+  = unsafeCoerce# (Exts.readArray# mary i s)
 {-# INLINE readUnliftedArray# #-}
 
 writeUnliftedArray# :: MutableUnliftedArray# s a -> Int# -> a -> State# s -> State# s
@@ -179,6 +178,5 @@ thawUnliftedArray# (UnliftedArray# ary) i n s
 
 casUnliftedArray# :: MutableUnliftedArray# s a -> Int# -> a -> a -> State# s -> (# State# s, Int#, a #)
 casUnliftedArray# (MutableUnliftedArray# mary) i x y s
-  = case Exts.casArray# mary i (unsafeCoerce# x) (unsafeCoerce# y) s of
-      (# s', sf, a #) -> (# s', sf, unsafeCoerce# a #)
+  = unsafeCoerce# (Exts.casArray# mary i (unsafeCoerce# x) (unsafeCoerce# y) s)
 {-# INLINE casUnliftedArray# #-}
