@@ -144,8 +144,7 @@ sizeofSmallMutableUnliftedArray# (SmallMutableUnliftedArray# mary)
 
 indexSmallUnliftedArray# :: SmallUnliftedArray# a -> Int# -> a
 indexSmallUnliftedArray# (SmallUnliftedArray# ary) i
-  | (# a #) <- Exts.indexSmallArray# ary i
-  = unsafeCoerce# a
+  = unsafeCoerce# (Exts.indexSmallArray# ary i)
 {-# INLINE indexSmallUnliftedArray# #-}
 
 unsafeFreezeSmallUnliftedArray# :: SmallMutableUnliftedArray# s a -> State# s -> (# State# s, SmallUnliftedArray# a #)

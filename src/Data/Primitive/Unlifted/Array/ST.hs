@@ -470,7 +470,7 @@ mapUnliftedArray :: (PrimUnlifted a, PrimUnlifted b)
 -- a bunch of expensive objects will also allocate a bunch of memory, which
 -- will likely trigger garbage collection that (as I understand it) will
 -- notice that one thunk is being evaluated twice and deduplicate. On the
--- other other hand, I don't think there's no guarantee that the thread that wins will be
+-- other other hand, I don't think there's any guarantee that the thread that wins will be
 -- the one that's further along, so maybe the noDuplicate is for the best.
 mapUnliftedArray f arr = unsafeCreateUnliftedArray sz $ \marr -> do
   let go !ix = if ix < sz
