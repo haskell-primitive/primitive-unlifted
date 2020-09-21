@@ -7,33 +7,11 @@
 {-# language RoleAnnotations #-}
 
 -- |
--- GHC contains three general classes of value types:
---
---   1. Unboxed types: values are machine values made up of fixed numbers of bytes
---   2. Unlifted types: values are pointers, but strictly evaluated
---   3. Lifted types: values are pointers, lazily evaluated
---
--- The first category can be stored in a 'ByteArray', and this allows types in
--- category 3 that are simple wrappers around category 1 types to be stored
--- more efficiently using a 'ByteArray'. This module provides the same facility
--- for category 2 types.
---
--- GHC has two primitive types, 'ArrayArray#' and 'MutableArrayArray#'. These
--- are arrays of pointers, but of category 2 values, so they are known to not
--- be bottom. This allows types that are wrappers around such types to be stored
--- in an array without an extra level of indirection.
---
--- The way that the 'ArrayArray#' API works is that one can read and write
--- 'ArrayArray#' values to the positions. This works because all category 2
--- types share a uniform representation, unlike unboxed values which are
--- represented by varying (by type) numbers of bytes. However, using the
--- this makes the internal API very unsafe to use, as one has to coerce values
--- to and from 'ArrayArray#'.
---
--- The API presented by this module is more type safe. 'UnliftedArray' and
--- 'MutableUnliftedArray' are parameterized by the type of arrays they contain, and
--- the coercions necessary are abstracted into a class, 'PrimUnlifted', of things
--- that are eligible to be stored.
+-- A version of the 'Data.Primitive.Unlifted.Array' interface
+-- specialized to 'ST'. This is intended primarily so library
+-- developers can easily check whether the basic operations are
+-- unboxed properly, but its more constrained type signatures
+-- also offer somewhat better type inference where applicable.
 module Data.Primitive.Unlifted.Array.ST
   ( -- * Types
     UnliftedArray_(..)
@@ -93,16 +71,28 @@ primitive_ :: (State# s -> State# s) -> ST s ()
 {-# INLINE primitive_ #-}
 primitive_ m = ST (\s -> (# m s, () #))
 
+-- | An @UnliftedArray_ a unlifted_a@ represents an array of values of a
+-- lifted type @a@ that wrap values of an unlifted type @unlifted_a@.
+-- It is expected that @unlifted_a ~ Unlifted a@, but imposing that constraint
+-- here would force the type roles to @nominal@, which is often undesirable
+-- when arrays are used as components of larger datatypes.
 data UnliftedArray_ a unlifted_a
   = UnliftedArray (UnliftedArray# unlifted_a)
 type role UnliftedArray_ phantom representational
 
+-- | A type synonym for an 'UnliftedArray_' containing lifted values of
+-- a particular type. As a general rule, this type synonym should not be used in
+-- class instances—use 'UnliftedArray_' with an equality constraint instead.
+-- It also should not be used when defining newtypes or datatypes, unless those
+-- will have restrictive type roles regardless—use 'UnliftedArray_' instead.
 type UnliftedArray a = UnliftedArray_ a (Unlifted a)
 
+-- | A mutable version of 'UnliftedArray_'.
 data MutableUnliftedArray_ s a unlifted_a
   = MutableUnliftedArray (MutableUnliftedArray# s unlifted_a)
 type role MutableUnliftedArray_ nominal phantom representational
 
+-- | A mutable version of 'MutableUnliftedArray'.
 type MutableUnliftedArray s a = MutableUnliftedArray_ s a (Unlifted a)
 
 instance unlifted_a ~ Unlifted a => PrimUnlifted (UnliftedArray_ a unlifted_a) where
