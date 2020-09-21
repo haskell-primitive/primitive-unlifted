@@ -15,6 +15,9 @@ Specifically, this implementation uses two fewer words of memory
 and one fewer indirection per element.
 We also add an 'MArray' instance for working in 'IO' that the 'stm'
 version lacks.
+Finally, the 'Eq' instance for the official @TArray@ is currently a little broken
+thanks to a bug in the instance for @Data.Array.Array@ (See GHC Gitlab issue
+#18700). We fix that bug here.
 -}
 
 module Data.Primitive.TArray.Classic (TArray) where
@@ -34,23 +37,28 @@ data TArray i a = TArray {
   }
 type role TArray nominal representational
 
-instance Eq (TArray i a) where
-  -- There's no way for TVars to move from one TArray to another,
-  -- so two of them are equal iff they're both empty or they're
-  -- actually the same array. There's no "safe" way to check if
-  -- they're the same array (though we can use `unsafeCoerce#` with
-  -- `sameMutableUnliftedArray#` if we wan to). But we can just
-  -- do a quick size check and then look at the first TVar of each.
+instance Eq i => Eq (TArray i a) where
+  -- There's no way for TVars to move from one TArray to another, so two of
+  -- them are equal iff they're both empty, with the same bounds, or they're
+  -- actually the same array. There's no "safe" way to check if they're the
+  -- same array (though we can use `unsafeCoerce#` with
+  -- `sameMutableUnliftedArray#` if we want to). But we can just do a quick size
+  -- check and then look at the first TVar of each.
   --
-  -- Note: we consider any two empty TArrays the same, even if they
-  -- have different bounds (e.g., (0, -1) and (4,2)). This matches
-  -- the (somewhat surprising) behavior of the version in stm,
-  -- based on the equally surprising instance for Data.Array.
-  -- See GHC Gitlab issue #18700. If that issue gets resolved
-  -- toward considering this a bug, we should fix it here too.
-  TArray _lb1 _ub1 range1 arr1 == TArray _lb2 _ub2 range2 arr2
-    = range1 == range2 && (range1 == 0
-        || indexUnliftedArray arr1 0 == indexUnliftedArray arr2 0)
+  -- Note: The instance in stm leans on the instance for @Array@ in @base@. As
+  -- of base-4.14.0.0, that instance is broken. See GHC Gitlab issue #18700. It
+  -- looks like that's probably going to get fixed, so we fix it here.
+  TArray lb1 ub1 range1 arr1 == TArray lb2 ub2 range2 arr2
+    | range1 /= range2 = False
+      -- If the arrays are both empty, then they may still have been
+      -- created with different bounds (e.g., (2,1) and (1,0)), so we
+      -- check.
+    | range1 == 0 = lb1 == lb2 && ub1 == ub2
+      -- If the arrays are not empty, but the first TVar of each is the
+      -- same, then they must have been created by the *same* newArray
+      -- action. Therefore they are sure to have the same bounds, and
+      -- are equal.
+    | otherwise = indexUnliftedArray arr1 0 == indexUnliftedArray arr2 0
 
 instance MArray TArray e STM where
   getBounds (TArray l u _ _) = pure (l, u)
