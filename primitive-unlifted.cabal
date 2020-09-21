@@ -25,9 +25,9 @@ library
     Data.Primitive.Unlifted.Array
     Data.Primitive.Unlifted.SmallArray
     Data.Primitive.Unlifted.SmallArray.ST
-    Data.Primitive.Unlifted.SmallArray.Base
+    Data.Primitive.Unlifted.SmallArray.Primops
     Data.Primitive.Unlifted.Array.ST
-    Data.Primitive.Unlifted.Array.Base
+    Data.Primitive.Unlifted.Array.Primops
     Data.Primitive.Unlifted.Box
     Data.Primitive.TArray.Classic
   build-depends:

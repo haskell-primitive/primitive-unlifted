@@ -80,7 +80,7 @@ module Data.Primitive.Unlifted.Array.ST
   ) where
 
 import Data.Primitive.Unlifted.Class (PrimUnlifted (..))
-import Data.Primitive.Unlifted.Array.Base
+import Data.Primitive.Unlifted.Array.Primops
 import GHC.Exts (Int(I#),State#)
 import GHC.ST (ST (..))
 

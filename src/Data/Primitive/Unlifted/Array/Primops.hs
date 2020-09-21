@@ -6,7 +6,7 @@
 -- |
 -- Primitive types representing unlifted arrays and the
 -- primops for manipulating them.
-module Data.Primitive.Unlifted.Array.Base
+module Data.Primitive.Unlifted.Array.Primops
   ( -- * Types
     UnliftedArray#
   , MutableUnliftedArray#
