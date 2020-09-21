@@ -62,6 +62,7 @@ module Data.Primitive.Unlifted.SmallArray.ST
   , emptySmallUnliftedArray
   , singletonSmallUnliftedArray
   , runSmallUnliftedArray
+  , dupableRunSmallUnliftedArray
     -- * List Conversion
   , smallUnliftedArrayToList
   , smallUnliftedArrayFromList
@@ -277,16 +278,37 @@ runSmallUnliftedArray
 {-# INLINE runSmallUnliftedArray #-}
 -- This is what we'd like to write, but GHC does not yet
 -- produce properly unboxed code when we do
--- runUnliftedArray m = runST $ m >>= unsafeFreezeUnliftedArray
+-- runUnliftedArray m = runST $ noDuplicate >> m >>= unsafeFreezeUnliftedArray
 runSmallUnliftedArray m = SmallUnliftedArray (runSmallUnliftedArray# m)
 
 runSmallUnliftedArray#
   :: (forall s. ST s (SmallMutableUnliftedArray s a))
   -> SmallUnliftedArray# (Unlifted a)
-runSmallUnliftedArray# m = case Exts.runRW# $ \s ->
+runSmallUnliftedArray# m = case Exts.runRW# $ \s0 ->
+  case Exts.noDuplicate# s0 of { s ->
+  case unST m s of { (# s', SmallMutableUnliftedArray mary# #) ->
+  unsafeFreezeSmallUnliftedArray# mary# s'}} of (# _, ary# #) -> ary#
+{-# INLINE runSmallUnliftedArray# #-}
+
+-- | Execute a stateful computation and freeze the resulting array.
+-- It is possible, but unlikely, that the computation will be run
+-- multiple times in multiple threads.
+dupableRunSmallUnliftedArray
+  :: (forall s. ST s (SmallMutableUnliftedArray s a))
+  -> SmallUnliftedArray a
+{-# INLINE dupableRunSmallUnliftedArray #-}
+-- This is what we'd like to write, but GHC does not yet
+-- produce properly unboxed code when we do
+-- dupableRunUnliftedArray m = runST $ m >>= unsafeFreezeUnliftedArray
+dupableRunSmallUnliftedArray m = SmallUnliftedArray (dupableRunSmallUnliftedArray# m)
+
+dupableRunSmallUnliftedArray#
+  :: (forall s. ST s (SmallMutableUnliftedArray s a))
+  -> SmallUnliftedArray# (Unlifted a)
+dupableRunSmallUnliftedArray# m = case Exts.runRW# $ \s ->
   case unST m s of { (# s', SmallMutableUnliftedArray mary# #) ->
   unsafeFreezeSmallUnliftedArray# mary# s'} of (# _, ary# #) -> ary#
-{-# INLINE runSmallUnliftedArray# #-}
+{-# INLINE dupableRunSmallUnliftedArray# #-}
 
 unST :: ST s a -> State# s -> (# State# s, a #)
 unST (ST f) = f
@@ -361,12 +383,26 @@ concatSmallUnliftedArray# a1 a2 =
       in
         if Exts.isTrue# (sza2 Exts.==# 0#)
         then a1
-        else Exts.runRW# $ \s ->
-          case unsafeNewSmallUnliftedArray# (sza1 Exts.+# sza2) s of { (# s', ma #) ->
-          case copySmallUnliftedArray# a1 0# ma 0# sza1 s' of { s'' ->
-          case copySmallUnliftedArray# a2 0# ma sza1 sza2 s'' of { s''' ->
-          case unsafeFreezeSmallUnliftedArray# ma s''' of
-            (# _, ar #) -> ar}}}
+        else Exts.runRW# $ \s0 ->
+          let
+            finish s =
+              case unsafeNewSmallUnliftedArray# (sza1 Exts.+# sza2) s of { (# s', ma #) ->
+              case copySmallUnliftedArray# a1 0# ma 0# sza1 s' of { s'' ->
+              case copySmallUnliftedArray# a2 0# ma sza1 sza2 s'' of { s''' ->
+              case unsafeFreezeSmallUnliftedArray# ma s''' of
+                (# _, ar #) -> ar}}}
+            -- GHC wants to inline this, but I very much doubt it's worth the
+            -- extra code, considering that it calls multiple out-of-line
+            -- primops.
+            {-# NOINLINE finish #-}
+          in
+            -- When the final array will be "small", we tolerate the possibility that
+            -- it could be constructed multiple times in different threads. Currently,
+            -- "small" means fewer than 1000 elements. This is a totally arbitrary
+            -- cutoff that has not been tuned whatsoever.
+            if Exts.isTrue# ((sza1 Exts.+# sza2) Exts.>=# 1000#)
+            then finish (Exts.noDuplicate# s0)
+            else finish s0
 
 foldrSmallUnliftedArray :: forall a b. PrimUnlifted a => (a -> b -> b) -> b -> SmallUnliftedArray a -> b
 {-# INLINE foldrSmallUnliftedArray #-}
@@ -446,6 +482,8 @@ mapSmallUnliftedArray :: (PrimUnlifted a, PrimUnlifted b)
   => (a -> b)
   -> SmallUnliftedArray a
   -> SmallUnliftedArray b
+-- See Data.Primitive.Unlifted.Array.ST for discussion of the noDuplicate#
+-- buried in this unsafeCreateSmallUnliftedArray.
 mapSmallUnliftedArray f arr = unsafeCreateSmallUnliftedArray sz $ \marr -> do
   let go !ix = if ix < sz
         then do

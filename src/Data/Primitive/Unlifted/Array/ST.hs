@@ -269,7 +269,7 @@ runUnliftedArray
 {-# INLINE runUnliftedArray #-}
 -- This is what we'd like to write, but GHC does not yet
 -- produce properly unboxed code when we do
--- runUnliftedArray m = runST $ m >>= unsafeFreezeUnliftedArray
+-- runUnliftedArray m = runST $ noDuplicate >> m >>= unsafeFreezeUnliftedArray
 runUnliftedArray m = UnliftedArray (runUnliftedArray# m)
 
 runUnliftedArray#
