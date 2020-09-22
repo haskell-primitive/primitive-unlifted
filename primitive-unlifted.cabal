@@ -31,6 +31,9 @@ library
     Data.Primitive.Unlifted.Array.ST
     Data.Primitive.Unlifted.Array.Primops
     Data.Primitive.Unlifted.Box
+    Data.Primitive.Unlifted.Weak
+    Data.Primitive.Unlifted.Weak.IO
+    Data.Primitive.Unlifted.Weak.Primops
     Data.Primitive.TArray.Classic
   build-depends:
     , base >=4.14.0.0 && <5
