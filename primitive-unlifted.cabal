@@ -30,6 +30,9 @@ library
     Data.Primitive.Unlifted.SmallArray.Primops
     Data.Primitive.Unlifted.Array.ST
     Data.Primitive.Unlifted.Array.Primops
+    Data.Primitive.Unlifted.MutVar.Primops
+    Data.Primitive.Unlifted.MutVar.ST
+    Data.Primitive.Unlifted.MutVar
     Data.Primitive.Unlifted.Box
     Data.Primitive.TArray.Classic
   build-depends:
