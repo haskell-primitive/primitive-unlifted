@@ -338,7 +338,7 @@ cloneMutableUnliftedArray (MutableUnliftedArray mary) (I# off) (I# len)
       (# s', mary' #) -> (# s', MutableUnliftedArray mary' #)
 
 emptyUnliftedArray :: UnliftedArray a
-emptyUnliftedArray = UnliftedArray (emptyUnliftedArray# Exts.void#)
+emptyUnliftedArray = UnliftedArray (emptyUnliftedArray# (##))
 
 singletonUnliftedArray :: PrimUnlifted a => a -> UnliftedArray a
 {-# INLINE singletonUnliftedArray #-}

@@ -92,7 +92,7 @@ data SULA a = SULA (SmallUnliftedArray# a)
 
 -- | Warning: Applying 'unsafeThawUnliftedArray#' to the array produced by
 -- this function will make demons come out of your nose.
-emptySmallUnliftedArray# :: Exts.Void# -> SmallUnliftedArray# a
+emptySmallUnliftedArray# :: (##) -> SmallUnliftedArray# a
 -- We make this primitive because it's the easiest way to get a
 -- *shared* primitive unlifted array.
 --
@@ -100,7 +100,7 @@ emptySmallUnliftedArray# :: Exts.Void# -> SmallUnliftedArray# a
 -- and does not really meaningfully support *growing* arrays of any type. If,
 -- however, that ever changes, growing the globally shared empty array would be
 -- pretty disastrous.
-emptySmallUnliftedArray# _ = case empty_small_unlifted_array of
+emptySmallUnliftedArray# (##) = case empty_small_unlifted_array of
   SULA ary -> ary
 {-# INLINE emptySmallUnliftedArray# #-}
 
