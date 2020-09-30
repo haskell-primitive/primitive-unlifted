@@ -42,14 +42,18 @@ library
   ghc-options: -Wall -O2
   default-language: Haskell2010
 
-test-suite unit
+test-suite test
   type: exitcode-stdio-1.0
   hs-source-dirs: test
-  main-is: Unit.hs
+  main-is: Main.hs
   build-depends:
     , base
     , primitive-unlifted
     , primitive
+    , quickcheck-classes-base
+    , QuickCheck
+    , tasty-quickcheck
+    , tasty
     , stm
   ghc-options: -Wall -O2
   default-language: Haskell2010
