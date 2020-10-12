@@ -4,6 +4,12 @@
 {-# language ScopedTypeVariables #-}
 {-# language RoleAnnotations #-}
 {-# language KindSignatures #-}
+
+-- See UnsafeCoercions.md for an explanation of why we coerce
+-- things the way we do here, and why some operations are marked
+-- NOINLINE.
+
+
 module Data.Primitive.Unlifted.MutVar.Primops
   ( UnliftedMutVar#
   , newUnliftedMutVar#
@@ -20,17 +26,17 @@ newtype UnliftedMutVar# s (a :: TYPE 'UnliftedRep) = UnliftedMutVar# (MutVar# s 
 type role UnliftedMutVar# nominal representational
 
 newUnliftedMutVar# :: a -> State# s -> (# State# s, UnliftedMutVar# s a #)
-{-# INLINE newUnliftedMutVar# #-}
+{-# NOINLINE newUnliftedMutVar# #-}
 newUnliftedMutVar# a s = case newMutVar# (unsafeCoerce# a) s of
   (# s', mv #) -> (# s', UnliftedMutVar# mv #)
 
 readUnliftedMutVar# :: UnliftedMutVar# s a -> State# s -> (# State# s, a #)
-{-# INLINE readUnliftedMutVar# #-}
+{-# NOINLINE readUnliftedMutVar# #-}
 readUnliftedMutVar# (UnliftedMutVar# mv) s
   = unsafeCoerce# (readMutVar# mv s)
 
 writeUnliftedMutVar# :: UnliftedMutVar# s a -> a -> State# s -> State# s
-{-# INLINE writeUnliftedMutVar# #-}
+{-# NOINLINE writeUnliftedMutVar# #-}
 writeUnliftedMutVar# (UnliftedMutVar# mv) a s
   = writeMutVar# mv (unsafeCoerce# a) s
 
@@ -57,7 +63,7 @@ casUnliftedMutVar#
   -> a -- ^ The expected value
   -> a -- ^ The new value to install if the 'UnliftedMutVar# contains the expected value
   -> State# s -> (# State# s, Int#, a #)
-{-# INLINE casUnliftedMutVar# #-}
+{-# NOINLINE casUnliftedMutVar# #-}
 casUnliftedMutVar# (UnliftedMutVar# mv) old new s
   = unsafeCoerce# (casMutVar# mv (unsafeCoerce# old) (unsafeCoerce# new) s)
 
@@ -69,13 +75,19 @@ casUnliftedMutVar# (UnliftedMutVar# mv) old new s
 -- we implement it as a CAS loop.
 atomicSwapUnliftedMutVar#
   :: UnliftedMutVar# s a -> a -> State# s -> (# State# s, a #)
+{-# NOINLINE atomicSwapUnliftedMutVar# #-}
+atomicSwapUnliftedMutVar# (UnliftedMutVar# mv) a s
+  = unsafeCoerce# (atomicSwapMutVar# mv (unsafeCoerce# a) s)
+
+atomicSwapMutVar#
+  :: MutVar# s a -> a -> State# s -> (# State# s, a #)
 -- We don't bother inlining this because it's kind of slow regardless;
 -- there doesn't seem to be much point. We don't use the "latest"
 -- value reported by casUnliftedMutVar# because I'm told chances of
 -- CAS success are better if we use a perfectly fresh value than if
 -- we take the time to check for CAS success in between.
-atomicSwapUnliftedMutVar# mv a s
-  = case readUnliftedMutVar# mv s of { (# s', old #) ->
-    case casUnliftedMutVar# mv old a s' of
-      (# s'', 0#, _ #) -> atomicSwapUnliftedMutVar# mv a s''
+atomicSwapMutVar# mv a s
+  = case readMutVar# mv s of { (# s', old #) ->
+    case casMutVar# mv old a s' of
+      (# s'', 0#, _ #) -> atomicSwapMutVar# mv a s''
       (# s'', _, _ #) -> (# s'', old #) }

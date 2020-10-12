@@ -3,6 +3,11 @@
 {-# language RoleAnnotations #-}
 {-# language UnliftedNewtypes #-}
 {-# language KindSignatures #-}
+{-# language ScopedTypeVariables #-}
+
+-- Oh what a mess this is! See UnsafeCoercions.md for an explanation
+-- of the hodgepodge in this module.
+
 -- |
 -- Primitive types representing unlifted arrays and the
 -- primops for manipulating them.
@@ -13,7 +18,7 @@ module Data.Primitive.Unlifted.Array.Primops
     -- We don't export the newtype constructors because they're bogus and
     -- because there's basically no reason they'd ever be used. This module
     -- contains a wrapped version of every Array# primop.  Eventually, all this
-    -- stuff will be in GHC.Prim, possibly with other names.
+    -- stuff will be supported by GHC.Prim using BoxedRep.
 
     -- * Operations
   , newUnliftedArray#
@@ -36,36 +41,36 @@ module Data.Primitive.Unlifted.Array.Primops
   , casUnliftedArray#
   ) where
 
-import GHC.Exts (Int#,State#,Array#,MutableArray#,Any,TYPE,RuntimeRep(UnliftedRep),unsafeCoerce#)
+import GHC.Exts ( Int#, State#, ArrayArray#, MutableArrayArray#
+                , TYPE, RuntimeRep (UnliftedRep), unsafeCoerce#)
 import qualified GHC.Exts as Exts
 
-newtype UnliftedArray# (a :: TYPE 'UnliftedRep) = UnliftedArray# (Array# Any)
+unsafeCoerceUnlifted :: forall (a :: TYPE 'UnliftedRep) (b :: TYPE 'UnliftedRep). a -> b
+{-# INLINE unsafeCoerceUnlifted #-}
+unsafeCoerceUnlifted a = unsafeCoerce# a
+
+unsafeCoerceUnliftedST :: forall s (a :: TYPE 'UnliftedRep) (b :: TYPE 'UnliftedRep). (# State# s, a #) -> (# State# s, b #)
+{-# INLINE unsafeCoerceUnliftedST #-}
+unsafeCoerceUnliftedST a = unsafeCoerce# a
+
+newtype UnliftedArray# (a :: TYPE 'UnliftedRep) = UnliftedArray# ArrayArray#
 type role UnliftedArray# representational
 
-newtype MutableUnliftedArray# s (a :: TYPE 'UnliftedRep) = MutableUnliftedArray# (MutableArray# s Any)
+newtype MutableUnliftedArray# s (a :: TYPE 'UnliftedRep) = MutableUnliftedArray# (MutableArrayArray# s)
 type role MutableUnliftedArray# nominal representational
 
 newUnliftedArray# :: Int# -> a -> State# s -> (# State# s, MutableUnliftedArray# s a #)
-newUnliftedArray# sz a s = case Exts.newArray# sz (unsafeCoerce# a) s of
-  (# s', mary #) -> (# s', MutableUnliftedArray# mary #)
-{-# INLINE newUnliftedArray# #-}
+newUnliftedArray# sz a s = unsafeCoerceUnliftedST (Exts.newArray# sz (unsafeCoerce# a) s)
+{-# NOINLINE newUnliftedArray# #-}
 
 -- | Create a 'MutableUnliftedArray#' whose entries contain some unspecified
 -- static value. This may be more convenient than 'newUnliftedArray#' if there
 -- is no value on hand with which to initialize the array. Each entry must be
 -- initialized before being read and used. This condition is not checked.
 unsafeNewUnliftedArray# :: Int# -> State# s -> (# State# s, MutableUnliftedArray# s a #)
--- We fill the array with the Nonsense data constructor. It doesn't much matter
--- *what* we stick in there, as long as it's a pointer the garbage collector
--- can understand and isn't something that might otherwise be released as garbage.
--- There's no point trying to stick an `error` in there, because there's no
--- code anywhere to force the error thunk.
-unsafeNewUnliftedArray# sz s = case Exts.newArray# sz (unsafeCoerce# Nonsense) s of
+unsafeNewUnliftedArray# sz s = case Exts.newArrayArray# sz s of
   (# s', mary #) -> (# s', MutableUnliftedArray# mary #)
 {-# INLINE unsafeNewUnliftedArray# #-}
-
-data Nonsense = Nonsense
-
 
 -- This represents a *statically allocated* value, preferably in a *read-only*
 -- segment of memory.
@@ -80,9 +85,9 @@ empty_unlifted_array :: ULA a
 empty_unlifted_array = ULA
   (Exts.runRW# $ \s ->
     case Exts.noDuplicate# s of { s' ->
-    case Exts.newArray# 0# (unsafeCoerce# Nonsense) s' of { (# s'', mary #) ->
-    case Exts.unsafeFreezeArray# mary s'' of { (# _, ary #) ->
-      UnliftedArray# ary }}})
+    case unsafeNewUnliftedArray# 0# s' of { (# s'', mary #) ->
+    case unsafeFreezeUnliftedArray# mary s'' of { (# _, ary #) ->
+      ary }}})
 {-# NOINLINE empty_unlifted_array #-}
 
 data ULA a = ULA (UnliftedArray# a)
@@ -103,80 +108,80 @@ emptyUnliftedArray# (##) = case empty_unlifted_array of
 
 sameMutableUnliftedArray# :: MutableUnliftedArray# s a -> MutableUnliftedArray# s a -> Int#
 sameMutableUnliftedArray# (MutableUnliftedArray# ar1) (MutableUnliftedArray# ar2)
-  = Exts.sameMutableArray# ar1 ar2
+  = Exts.sameMutableArrayArray# ar1 ar2
 {-# INLINE sameMutableUnliftedArray# #-}
 
 readUnliftedArray# :: MutableUnliftedArray# s a -> Int# -> State# s -> (# State# s, a #)
 readUnliftedArray# (MutableUnliftedArray# mary) i s
-  = unsafeCoerce# (Exts.readArray# mary i s)
+  = unsafeCoerceUnliftedST (Exts.readArrayArrayArray# mary i s)
 {-# INLINE readUnliftedArray# #-}
 
 writeUnliftedArray# :: MutableUnliftedArray# s a -> Int# -> a -> State# s -> State# s
 writeUnliftedArray# (MutableUnliftedArray# mary) i a s
-  = Exts.writeArray# mary i (unsafeCoerce# a) s
+  = Exts.writeArrayArrayArray# mary i (unsafeCoerceUnlifted a) s
 {-# INLINE writeUnliftedArray# #-}
 
 sizeofUnliftedArray# :: UnliftedArray# a -> Int#
-sizeofUnliftedArray# (UnliftedArray# ary) = Exts.sizeofArray# ary
+sizeofUnliftedArray# (UnliftedArray# ary) = Exts.sizeofArrayArray# ary
 {-# INLINE sizeofUnliftedArray# #-}
 
 sizeofMutableUnliftedArray# :: MutableUnliftedArray# s a -> Int#
 sizeofMutableUnliftedArray# (MutableUnliftedArray# mary)
-  = Exts.sizeofMutableArray# mary
+  = Exts.sizeofMutableArrayArray# mary
 {-# INLINE sizeofMutableUnliftedArray# #-}
 
 indexUnliftedArray# :: UnliftedArray# a -> Int# -> a
 indexUnliftedArray# (UnliftedArray# ary) i
-  = unsafeCoerce# (Exts.indexArray# ary i)
+  = unsafeCoerceUnlifted (Exts.indexArrayArrayArray# ary i)
 {-# INLINE indexUnliftedArray# #-}
 
 unsafeFreezeUnliftedArray# :: MutableUnliftedArray# s a -> State# s -> (# State# s, UnliftedArray# a #)
 unsafeFreezeUnliftedArray# (MutableUnliftedArray# mary) s
-  = case Exts.unsafeFreezeArray# mary s of
+  = case Exts.unsafeFreezeArrayArray# mary s of
       (# s', ary #) -> (# s', UnliftedArray# ary #)
 {-# INLINE unsafeFreezeUnliftedArray# #-}
 
 unsafeThawUnliftedArray# :: UnliftedArray# a -> State# s -> (# State# s, MutableUnliftedArray# s a #)
 unsafeThawUnliftedArray# (UnliftedArray# ary) s
-  = case Exts.unsafeThawArray# ary s of
-     (# s', mary #) -> (# s', MutableUnliftedArray# mary #)
+  = case Exts.unsafeThawArray# (unsafeCoerceUnlifted ary) s of
+     (# s', mary #) -> (# s', MutableUnliftedArray# (unsafeCoerceUnlifted mary) #)
 {-# INLINE unsafeThawUnliftedArray# #-}
 
 copyUnliftedArray# :: UnliftedArray# a -> Int# -> MutableUnliftedArray# s a -> Int# -> Int# -> State# s -> State# s
 copyUnliftedArray# (UnliftedArray# ary) i1 (MutableUnliftedArray# mary) i2 n s
-  = Exts.copyArray# ary i1 mary i2 n s
+  = Exts.copyArrayArray# ary i1 mary i2 n s
 {-# INLINE copyUnliftedArray# #-}
 
 copyMutableUnliftedArray# :: MutableUnliftedArray# s a -> Int# -> MutableUnliftedArray# s a -> Int# -> Int# -> State# s -> State# s
 copyMutableUnliftedArray# (MutableUnliftedArray# mary1) i1 (MutableUnliftedArray# mary2) i2 n s
-  = Exts.copyMutableArray# mary1 i1 mary2 i2 n s
+  = Exts.copyMutableArrayArray# mary1 i1 mary2 i2 n s
 {-# INLINE copyMutableUnliftedArray# #-}
 
 cloneUnliftedArray# :: UnliftedArray# a -> Int# -> Int# -> UnliftedArray# a
 cloneUnliftedArray# (UnliftedArray# ary) i n
-  = UnliftedArray# (Exts.cloneArray# ary i n)
+  = UnliftedArray# (unsafeCoerceUnlifted (Exts.cloneArray# (unsafeCoerceUnlifted ary) i n))
 {-# INLINE cloneUnliftedArray# #-}
 
 cloneMutableUnliftedArray# :: MutableUnliftedArray# s a -> Int# -> Int# -> State# s
   -> (# State# s, MutableUnliftedArray# s a #)
 cloneMutableUnliftedArray# (MutableUnliftedArray# mary) i n s
-  = case Exts.cloneMutableArray# mary i n s of
-      (# s', mary' #) -> (# s', MutableUnliftedArray# mary' #)
+  = case Exts.cloneMutableArray# (unsafeCoerceUnlifted mary) i n s of
+      (# s', mary' #) -> (# s', MutableUnliftedArray# (unsafeCoerceUnlifted mary') #)
 {-# INLINE cloneMutableUnliftedArray# #-}
 
 freezeUnliftedArray# :: MutableUnliftedArray# s a -> Int# -> Int# -> State# s -> (# State# s, UnliftedArray# a #)
 freezeUnliftedArray# (MutableUnliftedArray# mary) i n s
-  = case Exts.freezeArray# mary i n s of
-      (# s', ary #) -> (# s', UnliftedArray# ary #)
+  = case Exts.freezeArray# (unsafeCoerceUnlifted mary) i n s of
+      (# s', ary #) -> (# s', UnliftedArray# (unsafeCoerceUnlifted ary) #)
 {-# INLINE freezeUnliftedArray# #-}
 
 thawUnliftedArray# :: UnliftedArray# a -> Int# -> Int# -> State# s -> (# State# s, MutableUnliftedArray# s a #)
 thawUnliftedArray# (UnliftedArray# ary) i n s
-  = case Exts.thawArray# ary i n s of
-      (# s', mary #) -> (# s', MutableUnliftedArray# mary #)
+  = case Exts.thawArray# (unsafeCoerceUnlifted ary) i n s of
+      (# s', mary #) -> (# s', MutableUnliftedArray# (unsafeCoerceUnlifted mary) #)
 {-# INLINE thawUnliftedArray# #-}
 
 casUnliftedArray# :: MutableUnliftedArray# s a -> Int# -> a -> a -> State# s -> (# State# s, Int#, a #)
 casUnliftedArray# (MutableUnliftedArray# mary) i x y s
-  = unsafeCoerce# (Exts.casArray# mary i (unsafeCoerce# x) (unsafeCoerce# y) s)
-{-# INLINE casUnliftedArray# #-}
+  = unsafeCoerce# (Exts.casArray# (unsafeCoerceUnlifted mary) i (unsafeCoerce# x) (unsafeCoerce# y) s)
+{-# NOINLINE casUnliftedArray# #-}
