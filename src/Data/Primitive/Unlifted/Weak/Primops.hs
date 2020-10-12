@@ -7,6 +7,10 @@
 {-# language TypeFamilies #-}
 {-# language UnliftedNewtypes #-}
 
+-- See UnsafeCoercions.md for an explanation of why we coerce
+-- things the way we do here, and why some operations are marked
+-- NOINLINE.
+
 -- | "Primops" for weak references from (lifted or unlifted) values
 -- to unlifted values. Several of these use a slightly different
 -- interface than the underlying GHC primops. I have a GHC proposal
@@ -46,7 +50,7 @@ mkWeakFromUnliftedToUnlifted#
   :: forall (k :: TYPE 'UnliftedRep) (v :: TYPE 'UnliftedRep) c.
      k -> v -> (State# RealWorld -> (# State# RealWorld, c #))
   -> State# RealWorld -> (# State# RealWorld, UnliftedWeak# v #)
-{-# INLINE mkWeakFromUnliftedToUnlifted# #-}
+{-# NOINLINE mkWeakFromUnliftedToUnlifted# #-}
 mkWeakFromUnliftedToUnlifted# k v finalizer s =
   case mkWeak# k (unsafeCoerce# v) finalizer s of
     (# s', w #) -> (# s', UnliftedWeak# w #)
@@ -55,7 +59,7 @@ mkWeakFromUnliftedToUnlifted# k v finalizer s =
 mkWeakFromUnliftedToUnliftedNoFinalizer#
   :: forall (k :: TYPE 'UnliftedRep) (v :: TYPE 'UnliftedRep).
      k -> v -> State# RealWorld -> (# State# RealWorld, UnliftedWeak# v #)
-{-# INLINE mkWeakFromUnliftedToUnliftedNoFinalizer# #-}
+{-# NOINLINE mkWeakFromUnliftedToUnliftedNoFinalizer# #-}
 mkWeakFromUnliftedToUnliftedNoFinalizer# k v s =
   case mkWeakNoFinalizer# k (unsafeCoerce# v) s of
     (# s', w #) -> (# s', UnliftedWeak# w #)
@@ -67,7 +71,7 @@ mkWeakToUnlifted#
   :: forall k (v :: TYPE 'UnliftedRep) c.
      k -> v -> (State# RealWorld -> (# State# RealWorld, c #))
   -> State# RealWorld -> (# State# RealWorld, UnliftedWeak# v #)
-{-# INLINE mkWeakToUnlifted# #-}
+{-# NOINLINE mkWeakToUnlifted# #-}
 mkWeakToUnlifted# k v finalizer s =
   case mkWeak# k (unsafeCoerce# v) finalizer s of
     (# s', w #) -> (# s', UnliftedWeak# w #)
@@ -76,7 +80,7 @@ mkWeakToUnlifted# k v finalizer s =
 mkWeakToUnliftedNoFinalizer#
   :: forall k (v :: TYPE 'UnliftedRep).
      k -> v -> State# RealWorld -> (# State# RealWorld, UnliftedWeak# v #)
-{-# INLINE mkWeakToUnliftedNoFinalizer# #-}
+{-# NOINLINE mkWeakToUnliftedNoFinalizer# #-}
 mkWeakToUnliftedNoFinalizer# k v s =
   case mkWeakNoFinalizer# k (unsafeCoerce# v) s of
     (# s', w #) -> (# s', UnliftedWeak# w #)
@@ -108,7 +112,7 @@ deRefUnliftedWeak#
   :: UnliftedWeak# v
   -> State# RealWorld
   -> (# State# RealWorld, (# (##) | v #) #)
-{-# INLINE deRefUnliftedWeak# #-}
+{-# NOINLINE deRefUnliftedWeak# #-}
 deRefUnliftedWeak# (UnliftedWeak# w) s =
   case unsafeCoerce# (deRefWeak# w s) of
     (# s', flag, p #) -> case flag of

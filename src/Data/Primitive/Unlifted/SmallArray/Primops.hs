@@ -5,6 +5,11 @@
 {-# language KindSignatures #-}
 {-# language ScopedTypeVariables #-}
 {- OPTIONS_GHC -ddump-simpl #-}
+
+-- See UnsafeCoercions.md for an explanation of why we coerce
+-- things the way we do here, and why some operations are marked
+-- NOINLINE.
+
 -- |
 -- Primitive types representing unlifted arrays and the
 -- primops for manipulating them.
@@ -51,7 +56,7 @@ type role SmallMutableUnliftedArray# nominal representational
 newSmallUnliftedArray# :: forall a s. Int# -> a -> State# s -> (# State# s, SmallMutableUnliftedArray# s a #)
 newSmallUnliftedArray# sz a s = case Exts.newSmallArray# sz (unsafeCoerce# a) s of
   (# s', mary #) -> (# s', SmallMutableUnliftedArray# mary #)
-{-# INLINE newSmallUnliftedArray# #-}
+{-# NOINLINE newSmallUnliftedArray# #-}
 
 -- | Create a 'SmallMutableUnliftedArray#' whose entries contain some unspecified
 -- static value. This may be more convenient than 'newUnliftedArray#' if there
@@ -65,7 +70,7 @@ unsafeNewSmallUnliftedArray# :: Int# -> State# s -> (# State# s, SmallMutableUnl
 -- code anywhere to force the error thunk.
 unsafeNewSmallUnliftedArray# sz s = case Exts.newSmallArray# sz (unsafeCoerce# Nonsense) s of
   (# s', mary #) -> (# s', SmallMutableUnliftedArray# mary #)
-{-# INLINE unsafeNewSmallUnliftedArray# #-}
+{-# NOINLINE unsafeNewSmallUnliftedArray# #-}
 
 data Nonsense = Nonsense
 
@@ -117,13 +122,12 @@ shrinkSmallMutableUnliftedArray# (SmallMutableUnliftedArray# ar) sz s
 readSmallUnliftedArray# :: SmallMutableUnliftedArray# s a -> Int# -> State# s -> (# State# s, a #)
 readSmallUnliftedArray# (SmallMutableUnliftedArray# mary) i s
   = unsafeCoerce# (Exts.readSmallArray# mary i s)
---      of (# s', a #) -> (# s', unsafeCoerce# a #)
-{-# INLINE readSmallUnliftedArray# #-}
+{-# NOINLINE readSmallUnliftedArray# #-}
 
 writeSmallUnliftedArray# :: SmallMutableUnliftedArray# s a -> Int# -> a -> State# s -> State# s
 writeSmallUnliftedArray# (SmallMutableUnliftedArray# mary) i a s
   = Exts.writeSmallArray# mary i (unsafeCoerce# a) s
-{-# INLINE writeSmallUnliftedArray# #-}
+{-# NOINLINE writeSmallUnliftedArray# #-}
 
 sizeofSmallUnliftedArray# :: SmallUnliftedArray# a -> Int#
 sizeofSmallUnliftedArray# (SmallUnliftedArray# ary) = Exts.sizeofSmallArray# ary
@@ -145,7 +149,7 @@ sizeofSmallMutableUnliftedArray# (SmallMutableUnliftedArray# mary)
 indexSmallUnliftedArray# :: SmallUnliftedArray# a -> Int# -> a
 indexSmallUnliftedArray# (SmallUnliftedArray# ary) i
   = unsafeCoerce# (Exts.indexSmallArray# ary i)
-{-# INLINE indexSmallUnliftedArray# #-}
+{-# NOINLINE indexSmallUnliftedArray# #-}
 
 unsafeFreezeSmallUnliftedArray# :: SmallMutableUnliftedArray# s a -> State# s -> (# State# s, SmallUnliftedArray# a #)
 unsafeFreezeSmallUnliftedArray# (SmallMutableUnliftedArray# mary) s
@@ -196,4 +200,4 @@ thawSmallUnliftedArray# (SmallUnliftedArray# ary) i n s
 casSmallUnliftedArray# :: SmallMutableUnliftedArray# s a -> Int# -> a -> a -> State# s -> (# State# s, Int#, a #)
 casSmallUnliftedArray# (SmallMutableUnliftedArray# mary) i x y s
   = unsafeCoerce# (Exts.casSmallArray# mary i (unsafeCoerce# x) (unsafeCoerce# y) s)
-{-# INLINE casSmallUnliftedArray# #-}
+{-# NOINLINE casSmallUnliftedArray# #-}
