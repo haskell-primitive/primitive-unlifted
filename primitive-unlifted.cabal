@@ -32,6 +32,9 @@ library
     Data.Primitive.Unlifted.Array.Primops
     Data.Primitive.Unlifted.Box
     Data.Primitive.TArray.Classic
+    Data.Primitive.Unlifted.MVar
+    Data.Primitive.Unlifted.MVar.ST
+    Data.Primitive.Unlifted.MVar.Primops
   build-depends:
     , base >=4.14.0.0 && <5
     , bytestring >=0.10.8.2 && <0.11
