@@ -1,6 +1,6 @@
 cabal-version: 2.2
 name: primitive-unlifted
-version: 0.1.3.0
+version: 1.0.0.0
 synopsis: Primitive GHC types with unlifted types inside
 description:
   Primitive GHC types with unlifted types inside. There used
