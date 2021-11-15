@@ -2,6 +2,8 @@
 {-# language UnboxedTuples #-}
 {-# language TypeFamilies #-}
 {-# language ScopedTypeVariables #-}
+{-# language CPP #-}
+{-# language DataKinds #-}
 
 module Data.Primitive.Unlifted.Class
   ( PrimUnlifted(..)
@@ -16,15 +18,24 @@ import GHC.MVar (MVar(..))
 import GHC.IORef (IORef(..))
 import GHC.STRef (STRef(..))
 import GHC.Exts (State#,MutableByteArray#,ByteArray#,Int#)
-import GHC.Exts (ArrayArray#,MutableArrayArray#,RuntimeRep(UnliftedRep))
+import GHC.Exts (ArrayArray#,MutableArrayArray#)
 import GHC.Exts (MVar#,MutVar#,RealWorld)
 import GHC.Exts (TYPE,unsafeCoerce#)
 
 import qualified Data.Primitive.MVar as PM
 import qualified GHC.Exts as Exts
 
+-- In GHC 9.2 the UnliftedRep constructor of RuntimeRep was removed
+-- and replaced with a type synonym
+#if __GLASGOW_HASKELL__  >= 902
+import GHC.Exts (UnliftedRep)
+#else
+import GHC.Exts (RuntimeRep(UnliftedRep))
+type UnliftedRep = 'UnliftedRep
+#endif
+
 class PrimUnlifted a where
-  type Unlifted a :: TYPE 'UnliftedRep
+  type Unlifted a :: TYPE UnliftedRep
   toUnlifted# :: a -> Unlifted a
   fromUnlifted# :: Unlifted a -> a
   writeUnliftedArray# ::
