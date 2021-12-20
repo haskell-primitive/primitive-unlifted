@@ -2,6 +2,7 @@
 {-# language UnboxedTuples #-}
 {-# language TypeFamilies #-}
 {-# language ScopedTypeVariables #-}
+{-# language Trustworthy #-}
 
 module Data.Primitive.Unlifted.Class
   ( PrimUnlifted(..)
@@ -27,6 +28,7 @@ import GHC.Exts (MutableByteArray#,ByteArray#
 import GHC.Exts (RuntimeRep(UnliftedRep))
 import GHC.Exts (MVar#,MutVar#,RealWorld)
 import GHC.Exts (TYPE)
+import Data.Primitive.Unlifted.Types.Unsafe (ShortText# (..))
 
 import qualified Data.Primitive.MVar as PM
 import qualified GHC.Exts as Exts
@@ -72,9 +74,9 @@ instance PrimUnlifted ShortByteString where
   fromUnlifted# x = SBS x
 
 instance PrimUnlifted ShortText where
-  type Unlifted ShortText = ByteArray#
-  toUnlifted# t = case toShortByteString t of { SBS x -> x }
-  fromUnlifted# x = fromShortByteStringUnsafe (SBS x)
+  type Unlifted ShortText = ShortText#
+  toUnlifted# t = case toShortByteString t of { SBS x -> ShortText# x }
+  fromUnlifted# (ShortText# x) = fromShortByteStringUnsafe (SBS x)
 
 instance PrimUnlifted (MutableByteArray s) where
   type Unlifted (MutableByteArray s) = MutableByteArray# s

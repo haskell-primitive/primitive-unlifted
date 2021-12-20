@@ -24,6 +24,8 @@ tested-with: GHC == 8.10.1
 library
   exposed-modules:
     Data.Primitive.Unlifted.Class
+    Data.Primitive.Unlifted.Types
+    Data.Primitive.Unlifted.Types.Unsafe
     Data.Primitive.Unlifted.Array
     Data.Primitive.Unlifted.SmallArray
     Data.Primitive.Unlifted.SmallArray.ST
