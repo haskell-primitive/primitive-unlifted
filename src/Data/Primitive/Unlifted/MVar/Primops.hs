@@ -19,9 +19,12 @@ module Data.Primitive.Unlifted.MVar.Primops
   , sameUnliftedMVar#
   , isEmptyUnliftedMVar#
   ) where
-import GHC.Exts
 
-newtype UnliftedMVar# s (a :: TYPE 'UnliftedRep) = UnliftedMVar# (MVar# s Any)
+import GHC.Exts (MVar#, Any, State#, Int#, newMVar#, unsafeCoerce#, takeMVar#, tryTakeMVar#, putMVar#, tryPutMVar#, readMVar#, tryReadMVar#, sameMVar#, isEmptyMVar#)
+
+import Data.Primitive.Unlifted.Type
+
+newtype UnliftedMVar# s (a :: UnliftedType) = UnliftedMVar# (MVar# s Any)
 type role UnliftedMVar# nominal representational
 
 newUnliftedMVar# :: State# s -> (# State# s, UnliftedMVar# s a #)

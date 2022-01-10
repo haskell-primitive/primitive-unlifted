@@ -4,6 +4,7 @@
 {-# language UnliftedNewtypes #-}
 {-# language KindSignatures #-}
 {-# language ScopedTypeVariables #-}
+{-# language DataKinds #-}
 
 -- Oh what a mess this is! See UnsafeCoercions.md for an explanation
 -- of the hodgepodge in this module.
@@ -42,21 +43,23 @@ module Data.Primitive.Unlifted.Array.Primops
   ) where
 
 import GHC.Exts ( Int#, State#, ArrayArray#, MutableArrayArray#
-                , TYPE, RuntimeRep (UnliftedRep), unsafeCoerce#)
+                , unsafeCoerce#)
 import qualified GHC.Exts as Exts
 
-unsafeCoerceUnlifted :: forall (a :: TYPE 'UnliftedRep) (b :: TYPE 'UnliftedRep). a -> b
+import Data.Primitive.Unlifted.Type
+
+unsafeCoerceUnlifted :: forall (a :: UnliftedType) (b :: UnliftedType). a -> b
 {-# INLINE unsafeCoerceUnlifted #-}
 unsafeCoerceUnlifted a = unsafeCoerce# a
 
-unsafeCoerceUnliftedST :: forall s (a :: TYPE 'UnliftedRep) (b :: TYPE 'UnliftedRep). (# State# s, a #) -> (# State# s, b #)
+unsafeCoerceUnliftedST :: forall s (a :: UnliftedType) (b :: UnliftedType). (# State# s, a #) -> (# State# s, b #)
 {-# INLINE unsafeCoerceUnliftedST #-}
 unsafeCoerceUnliftedST a = unsafeCoerce# a
 
-newtype UnliftedArray# (a :: TYPE 'UnliftedRep) = UnliftedArray# ArrayArray#
+newtype UnliftedArray# (a :: UnliftedType) = UnliftedArray# ArrayArray#
 type role UnliftedArray# representational
 
-newtype MutableUnliftedArray# s (a :: TYPE 'UnliftedRep) = MutableUnliftedArray# (MutableArrayArray# s)
+newtype MutableUnliftedArray# s (a :: UnliftedType) = MutableUnliftedArray# (MutableArrayArray# s)
 type role MutableUnliftedArray# nominal representational
 
 newUnliftedArray# :: Int# -> a -> State# s -> (# State# s, MutableUnliftedArray# s a #)

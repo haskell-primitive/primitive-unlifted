@@ -30,13 +30,15 @@ module Data.Primitive.Unlifted.Weak.Primops
   , finalizeUnliftedWeak#
   ) where
 import GHC.Exts
-  ( TYPE, RuntimeRep (UnliftedRep), Any, unsafeCoerce#, RealWorld, State#
+  ( Any, unsafeCoerce#, RealWorld, State#
   , Weak#, mkWeak#, mkWeakNoFinalizer#, deRefWeak#, finalizeWeak#, Addr#
   , Int#, nullAddr#, addCFinalizerToWeak#)
 
+import Data.Primitive.Unlifted.Type
+
 -- | A weak pointer from a key (which may be lifted or unlifted)
 -- to an unlifted value.
-newtype UnliftedWeak# (a :: TYPE 'UnliftedRep) = UnliftedWeak# (Weak# Any)
+newtype UnliftedWeak# (a :: UnliftedType) = UnliftedWeak# (Weak# Any)
 type role UnliftedWeak# representational
 
 -- The primops in GHC.Prim are "open kinded". They don't care if the
@@ -47,7 +49,7 @@ type role UnliftedWeak# representational
 -- from an unlifted value @k@ to some unlifted value @v@. If @k@ is still alive
 -- then @v@ can be retrieved using @deRefUnliftedWeak#@.
 mkWeakFromUnliftedToUnlifted#
-  :: forall (k :: TYPE 'UnliftedRep) (v :: TYPE 'UnliftedRep) c.
+  :: forall (k :: UnliftedType) (v :: UnliftedType) c.
      k -> v -> (State# RealWorld -> (# State# RealWorld, c #))
   -> State# RealWorld -> (# State# RealWorld, UnliftedWeak# v #)
 {-# NOINLINE mkWeakFromUnliftedToUnlifted# #-}
@@ -57,7 +59,7 @@ mkWeakFromUnliftedToUnlifted# k v finalizer s =
 
 -- | The same as 'mkWeakFromUnliftedToUnlifted#' but without a finalizer.
 mkWeakFromUnliftedToUnliftedNoFinalizer#
-  :: forall (k :: TYPE 'UnliftedRep) (v :: TYPE 'UnliftedRep).
+  :: forall (k :: UnliftedType) (v :: UnliftedType).
      k -> v -> State# RealWorld -> (# State# RealWorld, UnliftedWeak# v #)
 {-# NOINLINE mkWeakFromUnliftedToUnliftedNoFinalizer# #-}
 mkWeakFromUnliftedToUnliftedNoFinalizer# k v s =
@@ -68,7 +70,7 @@ mkWeakFromUnliftedToUnliftedNoFinalizer# k v s =
 -- value @k@ to some unlifted value @v@. If @k@ is still alive then @v@ can be
 -- retrieved using @deRefUnliftedWeak#@.
 mkWeakToUnlifted#
-  :: forall k (v :: TYPE 'UnliftedRep) c.
+  :: forall k (v :: UnliftedType) c.
      k -> v -> (State# RealWorld -> (# State# RealWorld, c #))
   -> State# RealWorld -> (# State# RealWorld, UnliftedWeak# v #)
 {-# NOINLINE mkWeakToUnlifted# #-}
@@ -78,7 +80,7 @@ mkWeakToUnlifted# k v finalizer s =
 
 -- | The same as 'mkWeakToUnlifted#' but without a finalizer.
 mkWeakToUnliftedNoFinalizer#
-  :: forall k (v :: TYPE 'UnliftedRep).
+  :: forall k (v :: UnliftedType).
      k -> v -> State# RealWorld -> (# State# RealWorld, UnliftedWeak# v #)
 {-# NOINLINE mkWeakToUnliftedNoFinalizer# #-}
 mkWeakToUnliftedNoFinalizer# k v s =

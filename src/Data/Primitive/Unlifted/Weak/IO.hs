@@ -4,7 +4,7 @@
 {-# language RoleAnnotations #-}
 {-# language ScopedTypeVariables #-}
 {-# language TypeFamilies #-}
-{- OPTIONS_GHC -ddump-simpl #-}
+{-# language DataKinds #-}
 
 -- | A version of "Data.Primitive.Unlifted.Weak" specialized to the 'IO' type.
 module Data.Primitive.Unlifted.Weak.IO
@@ -21,8 +21,8 @@ module Data.Primitive.Unlifted.Weak.IO
   , addCFinalizerToUnliftedWeak2
   , touchUnlifted
   ) where
-import GHC.Exts ( TYPE, RuntimeRep (UnliftedRep)
-                , mkWeak#, mkWeakNoFinalizer# )
+
+import GHC.Exts ( mkWeak#, mkWeakNoFinalizer# )
 import Data.Primitive.Unlifted.Class (PrimUnlifted (..))
 import Data.Primitive.Unlifted.Weak.Primops
 import GHC.IO (IO (..))
@@ -30,13 +30,15 @@ import qualified GHC.Weak
 import GHC.Ptr (Ptr (..), FunPtr (..))
 import qualified GHC.Exts as Exts
 
+import Data.Primitive.Unlifted.Type
+
 -- | A weak pointer from a key (which may be lifted or unlifted)
 -- to an unlifted value. In @UnliftedWeak_ a unlifted_a@, it is generally
 -- expected that @unlifted_a ~ 'Unlifted' a@, but enforcing that here
 -- would lead to unfortunate type roles. See "System.Mem.Weak" for detailed
 -- information about weak references, including the notes at the end of that
 -- module.
-data UnliftedWeak_ a (unlifted_a :: TYPE 'UnliftedRep) = UnliftedWeak (UnliftedWeak# unlifted_a)
+data UnliftedWeak_ a (unlifted_a :: UnliftedType) = UnliftedWeak (UnliftedWeak# unlifted_a)
 type role UnliftedWeak_ phantom representational
 
 -- | A type synonym for an 'UnliftedWeak_' containing lifted values of

@@ -2,6 +2,7 @@
 {-# language UnboxedTuples #-}
 {-# language TypeFamilies #-}
 {-# language ScopedTypeVariables #-}
+{-# language DataKinds #-}
 
 module Data.Primitive.Unlifted.Class
   ( PrimUnlifted(..)
@@ -24,15 +25,15 @@ import GHC.StableName (StableName(..))
 import GHC.Exts (MutableByteArray#,ByteArray#
                 ,Array#,MutableArray#,SmallArray#,SmallMutableArray#
                 ,Weak#,TVar#,ThreadId#,StableName#)
-import GHC.Exts (RuntimeRep(UnliftedRep))
 import GHC.Exts (MVar#,MutVar#,RealWorld)
-import GHC.Exts (TYPE)
 
 import qualified Data.Primitive.MVar as PM
 import qualified GHC.Exts as Exts
 
+import Data.Primitive.Unlifted.Type
+
 class PrimUnlifted a where
-  type Unlifted a :: TYPE 'UnliftedRep
+  type Unlifted a :: UnliftedType
   toUnlifted# :: a -> Unlifted a
   fromUnlifted# :: Unlifted a -> a
 

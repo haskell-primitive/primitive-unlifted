@@ -4,6 +4,7 @@
 {-# language ScopedTypeVariables #-}
 {-# language RoleAnnotations #-}
 {-# language KindSignatures #-}
+{-# language DataKinds #-}
 
 -- See UnsafeCoercions.md for an explanation of why we coerce
 -- things the way we do here, and why some operations are marked
@@ -19,10 +20,13 @@ module Data.Primitive.Unlifted.MutVar.Primops
   , casUnliftedMutVar#
   , atomicSwapUnliftedMutVar#
   ) where
-import GHC.Exts
+
+import GHC.Exts (MutVar#, Any, State#, Int#, newMutVar#, unsafeCoerce#, readMutVar#, writeMutVar#, sameMutVar#, casMutVar#)
+
+import Data.Primitive.Unlifted.Type
 
 -- | An @UnliftedMutVar#@ behaves like a single-element mutable array.
-newtype UnliftedMutVar# s (a :: TYPE 'UnliftedRep) = UnliftedMutVar# (MutVar# s Any)
+newtype UnliftedMutVar# s (a :: UnliftedType) = UnliftedMutVar# (MutVar# s Any)
 type role UnliftedMutVar# nominal representational
 
 newUnliftedMutVar# :: a -> State# s -> (# State# s, UnliftedMutVar# s a #)

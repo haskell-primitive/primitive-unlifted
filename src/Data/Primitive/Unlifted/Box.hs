@@ -1,12 +1,14 @@
 {-# language KindSignatures #-}
 {-# language TypeFamilies #-}
 {-# language MagicHash #-}
+{-# language DataKinds #-}
 
 module Data.Primitive.Unlifted.Box where
-import GHC.Exts (TYPE, RuntimeRep (UnliftedRep))
-import Data.Primitive.Unlifted.Class
 
-data Box (a :: TYPE 'UnliftedRep) = Box# { unBox# :: a }
+import Data.Primitive.Unlifted.Class
+import Data.Primitive.Unlifted.Type
+
+data Box (a :: UnliftedType) = Box# { unBox# :: a }
 
 instance PrimUnlifted (Box a) where
   {-# INLINE toUnlifted# #-}

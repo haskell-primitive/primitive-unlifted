@@ -4,7 +4,7 @@
 {-# language UnliftedNewtypes #-}
 {-# language KindSignatures #-}
 {-# language ScopedTypeVariables #-}
-{- OPTIONS_GHC -ddump-simpl #-}
+{-# language DataKinds #-}
 
 -- See UnsafeCoercions.md for an explanation of why we coerce
 -- things the way we do here, and why some operations are marked
@@ -44,13 +44,15 @@ module Data.Primitive.Unlifted.SmallArray.Primops
   , casSmallUnliftedArray#
   ) where
 
-import GHC.Exts (Int#,State#,SmallArray#,SmallMutableArray#,Any,TYPE,RuntimeRep(UnliftedRep),unsafeCoerce#)
+import GHC.Exts (Int#,State#,SmallArray#,SmallMutableArray#,Any,unsafeCoerce#)
 import qualified GHC.Exts as Exts
 
-newtype SmallUnliftedArray# (a :: TYPE 'UnliftedRep) = SmallUnliftedArray# (SmallArray# Any)
+import Data.Primitive.Unlifted.Type
+
+newtype SmallUnliftedArray# (a :: UnliftedType) = SmallUnliftedArray# (SmallArray# Any)
 type role SmallUnliftedArray# representational
 
-newtype SmallMutableUnliftedArray# s (a :: TYPE 'UnliftedRep) = SmallMutableUnliftedArray# (SmallMutableArray# s Any)
+newtype SmallMutableUnliftedArray# s (a :: UnliftedType) = SmallMutableUnliftedArray# (SmallMutableArray# s Any)
 type role SmallMutableUnliftedArray# nominal representational
 
 newSmallUnliftedArray# :: forall a s. Int# -> a -> State# s -> (# State# s, SmallMutableUnliftedArray# s a #)
