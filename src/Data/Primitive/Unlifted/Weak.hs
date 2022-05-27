@@ -1,9 +1,16 @@
+{-# language CPP #-}
 {-# language MagicHash #-}
 {-# language UnboxedTuples #-}
 {-# language TypeInType #-}
 {-# language RoleAnnotations #-}
 {-# language ScopedTypeVariables #-}
 {-# language TypeFamilies #-}
+
+#if MIN_VERSION_base(4,15,0)
+
+module Data.Primitive.Unlifted.Weak () where
+
+#else
 
 -- | "System.Mem.Weak" provides weak references from lifted keys to lifted
 -- values. "Data.IORef", "Control.Concurrent.MVar", and
@@ -142,3 +149,5 @@ touchUnlifted
   :: (PrimUnlifted a, PrimMonad m, PrimState m ~ RealWorld)
   => a -> m ()
 touchUnlifted a = ioToPrim $ W.touchUnlifted a
+
+#endif

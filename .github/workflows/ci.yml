@@ -1,0 +1,88 @@
+name: ci
+on:
+  push:
+    branches:
+      - master
+  pull_request: {} # Validate all PRs
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: true
+      matrix:
+        os: [ubuntu-latest]
+        ghc: ['8.6', '8.8', '8.10', '9.0', '9.2', 'latest']
+        include:
+        - os: macOS-latest
+          ghc: 'latest'
+    steps:
+    - uses: actions/checkout@v2
+    - uses: haskell/actions/setup@v1
+      id: setup-haskell-cabal
+      with:
+        ghc-version: ${{ matrix.ghc }}
+    - name: Update cabal package database
+      run: cabal update
+    - uses: actions/cache@v2
+      name: Cache cabal stuff
+      with:
+        path: |
+          ${{ steps.setup-haskell-cabal.outputs.cabal-store }}
+          dist-newstyle
+        key: ${{ runner.os }}-${{ matrix.ghc }}
+    - name: Test
+      run: |
+        cabal build primitive-unlifted:test --enable-tests
+        cabal test --enable-tests
+    - name: Haddock
+      run: |
+        cabal haddock
+    - name: Cabal check
+      run: |
+        cabal check
+  windows-build:
+    runs-on: windows-latest
+    needs: build
+    strategy:
+      fail-fast: true
+      matrix:
+        ghc: ['latest']
+    steps:
+    - uses: actions/checkout@v2
+    - uses: haskell/actions/setup@v1
+      id: setup-haskell-cabal
+      with:
+        ghc-version: ${{ matrix.ghc }}
+    - name: Update cabal package database
+      run: cabal update
+    - uses: actions/cache@v2
+      name: Cache cabal stuff
+      with:
+        path: |
+          ${{ steps.setup-haskell-cabal.outputs.cabal-store }}
+          dist-newstyle
+        key: ${{ runner.os }}-${{ matrix.ghc }}
+    # We rebuild tests several times to avoid intermittent failures on Windows
+    # https://github.com/haskell/actions/issues/36
+    # We also use --enable-tests and --enable-benchmarks to avoid
+    # test and bench commands from reconfiguring and thus rebuilding.
+    - name: Build Test
+      run: |
+        bld() { cabal build primitive-unlifted:test --enable-tests; }
+        bld || bld || bld
+        
+    - name: Run Test
+      run: |
+        cabal test --enable-tests
+      shell: pwsh
+    - name: Haddock
+      run: |
+        cabal haddock
+    - name: Cabal check
+      run: |
+        cabal check
