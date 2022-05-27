@@ -1,3 +1,4 @@
+{-# language CPP #-}
 {-# language UnboxedTuples #-}
 {-# language UnboxedSums #-}
 {-# language RoleAnnotations #-}
@@ -9,6 +10,12 @@
 {-# language ViewPatterns #-}
 {-# language BangPatterns #-}
 {- options_ghc -ddump-simpl #-}
+
+#if MIN_VERSION_base(4,15,0)
+
+module Data.Primitive.Unlifted.MVar () where
+
+#else
 
 -- | This module includes all the features of "Control.Concurrent.MVar", except
 -- that the functions in "Data.Primitive.Unlifted.Weak" subsume the functionality
@@ -135,3 +142,5 @@ modifyUnliftedMVarMasked_
   => UnliftedMVar RealWorld a -> (a -> m a) -> m ()
 {-# INLINE modifyUnliftedMVarMasked_ #-}
 modifyUnliftedMVarMasked_ m st = stToPrim $ MV.modifyUnliftedMVarMasked_ m (primToST . st)
+
+#endif

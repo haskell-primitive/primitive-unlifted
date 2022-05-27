@@ -1,3 +1,4 @@
+{-# language CPP #-}
 {-# language ScopedTypeVariables #-}
 {-# language MagicHash #-}
 {-# language KindSignatures #-}
@@ -6,6 +7,12 @@
 {-# language UnliftedNewtypes #-}
 {-# language RoleAnnotations #-}
 {-# language DataKinds #-}
+
+#if MIN_VERSION_base(4,15,0)
+
+module Data.Primitive.Unlifted.MVar.Primops () where
+
+#else
 
 module Data.Primitive.Unlifted.MVar.Primops
   ( UnliftedMVar#
@@ -73,3 +80,5 @@ isEmptyUnliftedMVar# :: UnliftedMVar# s a -> State# s -> (# State# s, Int# #)
 {-# INLINE isEmptyUnliftedMVar# #-}
 isEmptyUnliftedMVar# (UnliftedMVar# mv) s
   = isEmptyMVar# mv s
+
+#endif

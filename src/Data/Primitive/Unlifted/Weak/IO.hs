@@ -1,3 +1,4 @@
+{-# language CPP #-}
 {-# language MagicHash #-}
 {-# language UnboxedTuples #-}
 {-# language TypeInType #-}
@@ -5,6 +6,12 @@
 {-# language ScopedTypeVariables #-}
 {-# language TypeFamilies #-}
 {-# language DataKinds #-}
+
+#if MIN_VERSION_base(4,15,0)
+
+module Data.Primitive.Unlifted.Weak.IO () where
+
+#else
 
 -- | A version of "Data.Primitive.Unlifted.Weak" specialized to the 'IO' type.
 module Data.Primitive.Unlifted.Weak.IO
@@ -168,3 +175,5 @@ touchUnlifted
   => a -> IO ()
 touchUnlifted a = IO $ \s ->
   (# Exts.touch# (toUnlifted# a) s, () #)
+
+#endif

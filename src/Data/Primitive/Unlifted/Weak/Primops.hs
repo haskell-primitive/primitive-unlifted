@@ -1,3 +1,4 @@
+{-# language CPP #-}
 {-# language MagicHash #-}
 {-# language UnboxedTuples #-}
 {-# language UnboxedSums #-}
@@ -6,6 +7,12 @@
 {-# language ScopedTypeVariables #-}
 {-# language TypeFamilies #-}
 {-# language UnliftedNewtypes #-}
+
+#if MIN_VERSION_base(4,15,0)
+
+module Data.Primitive.Unlifted.Weak.Primops () where
+
+#else
 
 -- See UnsafeCoercions.md for an explanation of why we coerce
 -- things the way we do here, and why some operations are marked
@@ -137,3 +144,5 @@ finalizeUnliftedWeak# (UnliftedWeak# w) s =
   case finalizeWeak# w s of
     (# s', 0#, _ #) -> (# s', (# (##) | #) #) -- already dead, or no Haskell finalizer
     (# s', _, f #) -> (# s', (# | f #) #)
+
+#endif
