@@ -1,9 +1,11 @@
 {-# language MagicHash #-}
 {-# language UnboxedTuples #-}
-{-# language TypeInType #-}
+{-# language DataKinds #-}
+{-# language PolyKinds #-}
 {-# language RoleAnnotations #-}
 {-# language ScopedTypeVariables #-}
 {-# language TypeFamilies #-}
+{-# language TypeOperators #-}
 
 -- | "System.Mem.Weak" provides weak references from lifted keys to lifted
 -- values. "Data.IORef", "Control.Concurrent.MVar", and
