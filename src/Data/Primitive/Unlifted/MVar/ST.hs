@@ -3,6 +3,7 @@
 {-# language RoleAnnotations #-}
 {-# language ScopedTypeVariables #-}
 {-# language TypeFamilies #-}
+{-# language TypeOperators #-}
 {-# language MagicHash #-}
 {-# language RankNTypes #-}
 {-# language PatternSynonyms #-}

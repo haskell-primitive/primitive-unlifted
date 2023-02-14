@@ -1,9 +1,11 @@
 {-# language MagicHash #-}
 {-# language UnboxedTuples #-}
-{-# language TypeInType #-}
+{-# language DataKinds #-}
+{-# language PolyKinds #-}
 {-# language RoleAnnotations #-}
 {-# language ScopedTypeVariables #-}
 {-# language TypeFamilies #-}
+{-# language TypeOperators #-}
 {-# language DataKinds #-}
 
 -- | A version of "Data.Primitive.Unlifted.Weak" specialized to the 'IO' type.

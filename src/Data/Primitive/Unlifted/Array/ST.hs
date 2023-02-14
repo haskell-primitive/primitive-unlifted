@@ -3,6 +3,7 @@
 {-# language RankNTypes #-}
 {-# language ScopedTypeVariables #-}
 {-# language TypeFamilies #-}
+{-# language TypeOperators #-}
 {-# language UnboxedTuples #-}
 {-# language RoleAnnotations #-}
 

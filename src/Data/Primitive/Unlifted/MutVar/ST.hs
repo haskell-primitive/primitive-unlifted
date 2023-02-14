@@ -3,6 +3,7 @@
 {-# language MagicHash #-}
 {-# language UnboxedTuples #-}
 {-# language TypeFamilies #-}
+{-# language TypeOperators #-}
 
 module Data.Primitive.Unlifted.MutVar.ST
   ( UnliftedMutVar_ (..)
