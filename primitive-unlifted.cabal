@@ -1,6 +1,6 @@
 cabal-version: 2.2
 name: primitive-unlifted
-version: 1.0.0.0
+version: 2.0.0.0
 synopsis: Primitive GHC types with unlifted types inside
 description:
   Primitive GHC types with unlifted types inside. There used
@@ -19,7 +19,7 @@ maintainer: andrew.thaddeus@gmail.com
 copyright: 2019 Andrew Martin
 category: Data
 extra-source-files: CHANGELOG.md
-tested-with: GHC == 8.10.7, GHC == 9.0.1, GHC == 9.2.1
+tested-with: GHC == 9.4.5
 
 library
   exposed-modules:
@@ -43,16 +43,12 @@ library
     Data.Primitive.Unlifted.MVar.Primops
     Data.Primitive.Unlifted.Type
   build-depends:
-    , base >=4.14.0.0 && <5
+    , base >=4.17.1.0 && <5
     , bytestring >=0.10.8.2 && <0.12
-    , primitive >= 0.7 && <0.9
+    , primitive >= 0.7 && <0.10
     , text-short >=0.1.3 && <0.2
     , array
   hs-source-dirs: src
-  if (impl (ghc >= 9.4))
-    hs-source-dirs: new-primops
-  else
-    hs-source-dirs: old-primops
   ghc-options: -Wall -O2
   default-language: Haskell2010
 

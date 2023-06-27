@@ -4,10 +4,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to the [Haskell Package Versioning Policy](https://pvp.haskell.org/).
 
-## ???
+## 2.0.0.0 -- 2023-06-27
 
-* Use totally legitimate unlifted primitive types and operations for
-  GHC >= 9.4.
+* Use legitimate unlifted primitive types and operations, only supporting
+  GHC 9.4 and newer.
 
 ## 1.0.0.0 -- 2020-11-02
 
