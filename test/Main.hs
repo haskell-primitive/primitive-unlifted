@@ -6,6 +6,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
@@ -83,7 +84,7 @@ instance (Arbitrary a, Prim a) => Arbitrary (PrimArray a) where
         writePrimArray a ix x
       unsafeFreezePrimArray a
 
-instance (Arbitrary a, PrimUnlifted a, Unlifted a ~ b) => Arbitrary (UnliftedArray_ a b) where
+instance (Arbitrary b, PrimUnlifted b, Unlifted b ~ a) => Arbitrary (UnliftedArray_ a b) where
   arbitrary = do
     xs <- QC.vector =<< QC.choose (0,3)
     return (unliftedArrayFromList xs)

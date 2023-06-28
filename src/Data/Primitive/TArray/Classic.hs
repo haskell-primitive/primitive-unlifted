@@ -33,7 +33,7 @@ data TArray i a = TArray {
   , _ub :: !i         -- the upper bound
   , range :: !Int    -- A cache of (rangeSize (l, u))
                      -- used to make sure an index is really in range
-  , arr :: !(UnliftedArray_ (TVar a) (TVar# RealWorld a))
+  , arr :: !(UnliftedArray_ (TVar# RealWorld a) (TVar a))
   }
 type role TArray nominal representational
 

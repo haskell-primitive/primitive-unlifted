@@ -77,32 +77,32 @@ primitive_ m = ST (\s -> (# m s, () #))
 -- It is expected that @unlifted_a ~ Unlifted a@, but imposing that constraint
 -- here would force the type roles to @nominal@, which is often undesirable
 -- when arrays are used as components of larger datatypes.
-data UnliftedArray_ a unlifted_a
+data UnliftedArray_ unlifted_a a
   = UnliftedArray (UnliftedArray# unlifted_a)
-type role UnliftedArray_ phantom representational
+type role UnliftedArray_ representational phantom 
 
 -- | A type synonym for an 'UnliftedArray_' containing lifted values of
 -- a particular type. As a general rule, this type synonym should not be used in
 -- class instances—use 'UnliftedArray_' with an equality constraint instead.
 -- It also should not be used when defining newtypes or datatypes, unless those
 -- will have restrictive type roles regardless—use 'UnliftedArray_' instead.
-type UnliftedArray a = UnliftedArray_ a (Unlifted a)
+type UnliftedArray a = UnliftedArray_ (Unlifted a) a
 
 -- | A mutable version of 'UnliftedArray_'.
-data MutableUnliftedArray_ s a unlifted_a
+data MutableUnliftedArray_ unlifted_a s a
   = MutableUnliftedArray (MutableUnliftedArray# s unlifted_a)
-type role MutableUnliftedArray_ nominal phantom representational
+type role MutableUnliftedArray_ representational nominal phantom 
 
 -- | A mutable version of 'MutableUnliftedArray'.
-type MutableUnliftedArray s a = MutableUnliftedArray_ s a (Unlifted a)
+type MutableUnliftedArray s a = MutableUnliftedArray_ (Unlifted a) s a
 
-instance unlifted_a ~ Unlifted a => PrimUnlifted (UnliftedArray_ a unlifted_a) where
-  type Unlifted (UnliftedArray_ _ unlifted_a) = UnliftedArray# unlifted_a
+instance unlifted_a ~ Unlifted a => PrimUnlifted (UnliftedArray_ unlifted_a a) where
+  type Unlifted (UnliftedArray_ unlifted_a _) = UnliftedArray# unlifted_a
   toUnlifted# (UnliftedArray a) = a
   fromUnlifted# x = UnliftedArray x
 
-instance unlifted_a ~ Unlifted a => PrimUnlifted (MutableUnliftedArray_ s a unlifted_a) where
-  type Unlifted (MutableUnliftedArray_ s _ unlifted_a) = MutableUnliftedArray# s unlifted_a
+instance unlifted_a ~ Unlifted a => PrimUnlifted (MutableUnliftedArray_ unlifted_a s a) where
+  type Unlifted (MutableUnliftedArray_ unlifted_a s _) = MutableUnliftedArray# s unlifted_a
   toUnlifted# (MutableUnliftedArray a) = a
   fromUnlifted# x = MutableUnliftedArray x
 
@@ -182,8 +182,8 @@ unsafeFreezeUnliftedArray (MutableUnliftedArray maa#)
 -- | Determines whether two 'MutableUnliftedArray' values are the same. This is
 -- object/pointer identity, not based on the contents.
 sameMutableUnliftedArray
-  :: MutableUnliftedArray s a
-  -> MutableUnliftedArray s a
+  :: MutableUnliftedArray_ unlifted_a s a
+  -> MutableUnliftedArray_ unlifted_a s a
   -> Bool
 sameMutableUnliftedArray (MutableUnliftedArray maa1#) (MutableUnliftedArray maa2#)
   = Exts.isTrue# (sameMutableUnliftedArray# maa1# maa2#)
@@ -338,7 +338,7 @@ cloneMutableUnliftedArray (MutableUnliftedArray mary) (I# off) (I# len)
   = ST $ \s -> case cloneMutableUnliftedArray# mary off len s of
       (# s', mary' #) -> (# s', MutableUnliftedArray mary' #)
 
-emptyUnliftedArray :: UnliftedArray a
+emptyUnliftedArray :: UnliftedArray_ unlifted_a a
 emptyUnliftedArray = UnliftedArray (emptyUnliftedArray# (##))
 
 singletonUnliftedArray :: PrimUnlifted a => a -> UnliftedArray a
@@ -512,28 +512,28 @@ unliftedArrayFromListN len vs = unsafeCreateUnliftedArray len run where
     go vs 0
 
 instance (PrimUnlifted a, unlifted_a ~ Unlifted a)
-  => Exts.IsList (UnliftedArray_ a unlifted_a) where
-  type Item (UnliftedArray_ a _) = a
+  => Exts.IsList (UnliftedArray_ unlifted_a a) where
+  type Item (UnliftedArray_ _ a) = a
   fromList = unliftedArrayFromList
   fromListN = unliftedArrayFromListN
   toList = unliftedArrayToList
 
 instance (PrimUnlifted a, unlifted_a ~ Unlifted a)
-  => Semigroup (UnliftedArray_ a unlifted_a) where
+  => Semigroup (UnliftedArray_ unlifted_a a) where
   (<>) = concatUnliftedArray
 
-instance (PrimUnlifted a, unlifted_a ~ Unlifted a) => Monoid (UnliftedArray_ a unlifted_a) where
+instance (PrimUnlifted a, unlifted_a ~ Unlifted a) => Monoid (UnliftedArray_ unlifted_a a) where
   mempty = emptyUnliftedArray
 
-instance (Show a, PrimUnlifted a, unlifted_a ~ Unlifted a) => Show (UnliftedArray_ a unlifted_a) where
+instance (Show a, PrimUnlifted a, unlifted_a ~ Unlifted a) => Show (UnliftedArray_ unlifted_a a) where
   showsPrec p a = showParen (p > 10) $
     showString "fromListN " . shows (sizeofUnliftedArray a) . showString " "
       . shows (unliftedArrayToList a)
 
-instance unlifted_a ~ Unlifted a => Eq (MutableUnliftedArray_ s a unlifted_a) where
+instance unlifted_a ~ Unlifted a => Eq (MutableUnliftedArray_ unlifted_a s a) where
   (==) = sameMutableUnliftedArray
 
-instance (Eq a, PrimUnlifted a, unlifted_a ~ Unlifted a) => Eq (UnliftedArray_ a unlifted_a) where
+instance (Eq a, PrimUnlifted a, unlifted_a ~ Unlifted a) => Eq (UnliftedArray_ unlifted_a a) where
   aa1 == aa2 = sizeofUnliftedArray aa1 == sizeofUnliftedArray aa2
             && loop (sizeofUnliftedArray aa1 - 1)
    where
