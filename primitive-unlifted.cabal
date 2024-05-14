@@ -59,7 +59,7 @@ test-suite test
   build-depends:
     , base
     , primitive-unlifted
-    , primitive
+    , primitive >=0.9
     , quickcheck-classes-base
     , QuickCheck
     , tasty-quickcheck

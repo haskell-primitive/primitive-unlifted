@@ -21,6 +21,7 @@ import Data.Primitive.Unlifted.Array
 import Data.Primitive.Unlifted.Class
 import Data.Proxy (Proxy(..))
 import Data.Word
+import GHC.Exts (fromList)
 import GHC.Int
 import Test.QuickCheck (Arbitrary,Arbitrary1,Gen,CoArbitrary,Function)
 import Test.Tasty (defaultMain,testGroup,TestTree)
