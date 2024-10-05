@@ -13,8 +13,8 @@
 -- primops for manipulating them.
 module Data.Primitive.Unlifted.SmallArray.Primops
   ( -- * Types
-    SmallUnliftedArray#
-  , SmallMutableUnliftedArray#
+    SmallUnliftedArray#(..)
+  , SmallMutableUnliftedArray#(..)
     -- We don't export the newtype constructors because they're bogus and
     -- because there's basically no reason they'd ever be used. This module
     -- contains a wrapped version of every Array# primop.  Eventually, all this
