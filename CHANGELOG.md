@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to the [Haskell Package Versioning Policy](https://pvp.haskell.org/).
 
+## 2.2.0.0 -- 2024-10-05
+
+* Similarly to the change in 2.1.0.0, change the order of the type arguments to `SmallUnliftedArray_` and
+  `SmallMutableUnliftedArray_`. This makes the library work better with
+  the typeclasses in the `contiguous` library.
+
 ## 2.1.0.0 -- 2023-06-28
 
 * Change the order of the type arguments to `UnliftedArray_` and

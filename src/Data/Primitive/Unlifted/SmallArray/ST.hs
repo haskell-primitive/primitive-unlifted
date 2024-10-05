@@ -78,30 +78,30 @@ primitive_ m = ST (\s -> (# m s, () #))
 -- It is expected that @unlifted_a ~ Unlifted a@, but imposing that constraint
 -- here would force the type roles to @nominal@, which is often undesirable
 -- when arrays are used as components of larger datatypes.
-data SmallUnliftedArray_ a unlifted_a
+data SmallUnliftedArray_ unlifted_a a 
   = SmallUnliftedArray (SmallUnliftedArray# unlifted_a)
-type role SmallUnliftedArray_ phantom representational
+type role SmallUnliftedArray_ representational phantom 
 
 -- | A type synonym for a 'SmallUnliftedArray_' containing lifted values of
 -- a particular type. As a general rule, this type synonym should not be used in
 -- class instances—use 'SmallUnliftedArray_' with an equality constraint instead.
 -- It also should not be used when defining newtypes or datatypes, unless those
 -- will have restrictive type roles regardless—use 'SmallUnliftedArray_' instead.
-type SmallUnliftedArray a = SmallUnliftedArray_ a (Unlifted a)
+type SmallUnliftedArray a = SmallUnliftedArray_ (Unlifted a) a 
 
-data SmallMutableUnliftedArray_ s a unlifted_a
+data SmallMutableUnliftedArray_ unlifted_a s a
   = SmallMutableUnliftedArray (SmallMutableUnliftedArray# s unlifted_a)
-type role SmallMutableUnliftedArray_ nominal phantom representational
+type role SmallMutableUnliftedArray_ representational nominal phantom 
 
-type SmallMutableUnliftedArray s a = SmallMutableUnliftedArray_ s a (Unlifted a)
+type SmallMutableUnliftedArray s a = SmallMutableUnliftedArray_ (Unlifted a) s a 
 
-instance unlifted_a ~ Unlifted a => PrimUnlifted (SmallUnliftedArray_ a unlifted_a) where
-  type Unlifted (SmallUnliftedArray_ _ unlifted_a) = SmallUnliftedArray# unlifted_a
+instance unlifted_a ~ Unlifted a => PrimUnlifted (SmallUnliftedArray_ unlifted_a a) where
+  type Unlifted (SmallUnliftedArray_ unlifted_a _) = SmallUnliftedArray# unlifted_a
   toUnlifted# (SmallUnliftedArray a) = a
   fromUnlifted# x = SmallUnliftedArray x
 
-instance unlifted_a ~ Unlifted a => PrimUnlifted (SmallMutableUnliftedArray_ s a unlifted_a) where
-  type Unlifted (SmallMutableUnliftedArray_ s _ unlifted_a) = SmallMutableUnliftedArray# s unlifted_a
+instance unlifted_a ~ Unlifted a => PrimUnlifted (SmallMutableUnliftedArray_ unlifted_a s a) where
+  type Unlifted (SmallMutableUnliftedArray_ unlifted_a s _) = SmallMutableUnliftedArray# s unlifted_a 
   toUnlifted# (SmallMutableUnliftedArray a) = a
   fromUnlifted# x = SmallMutableUnliftedArray x
 
@@ -511,28 +511,28 @@ smallUnliftedArrayFromListN len vs = unsafeCreateSmallUnliftedArray len run wher
     go vs 0
 
 instance (PrimUnlifted a, unlifted_a ~ Unlifted a)
-  => Exts.IsList (SmallUnliftedArray_ a unlifted_a) where
-  type Item (SmallUnliftedArray_ a _) = a
+  => Exts.IsList (SmallUnliftedArray_ unlifted_a a) where
+  type Item (SmallUnliftedArray_ _ a) = a
   fromList = smallUnliftedArrayFromList
   fromListN = smallUnliftedArrayFromListN
   toList = smallUnliftedArrayToList
 
 instance (PrimUnlifted a, unlifted_a ~ Unlifted a)
-  => Semigroup (SmallUnliftedArray_ a unlifted_a) where
+  => Semigroup (SmallUnliftedArray_ unlifted_a a) where
   (<>) = concatSmallUnliftedArray
 
-instance (PrimUnlifted a, unlifted_a ~ Unlifted a) => Monoid (SmallUnliftedArray_ a unlifted_a) where
+instance (PrimUnlifted a, unlifted_a ~ Unlifted a) => Monoid (SmallUnliftedArray_ unlifted_a a) where
   mempty = emptySmallUnliftedArray
 
-instance (Show a, PrimUnlifted a, unlifted_a ~ Unlifted a) => Show (SmallUnliftedArray_ a unlifted_a) where
+instance (Show a, PrimUnlifted a, unlifted_a ~ Unlifted a) => Show (SmallUnliftedArray_ unlifted_a a) where
   showsPrec p a = showParen (p > 10) $
     showString "fromListN " . shows (sizeofSmallUnliftedArray a) . showString " "
       . shows (smallUnliftedArrayToList a)
 
-instance unlifted_a ~ Unlifted a => Eq (SmallMutableUnliftedArray_ s a unlifted_a) where
+instance unlifted_a ~ Unlifted a => Eq (SmallMutableUnliftedArray_ unlifted_a s a) where
   (==) = sameSmallMutableUnliftedArray
 
-instance (Eq a, PrimUnlifted a, unlifted_a ~ Unlifted a) => Eq (SmallUnliftedArray_ a unlifted_a) where
+instance (Eq a, PrimUnlifted a, unlifted_a ~ Unlifted a) => Eq (SmallUnliftedArray_ unlifted_a a) where
   aa1 == aa2 = sizeofSmallUnliftedArray aa1 == sizeofSmallUnliftedArray aa2
             && loop (sizeofSmallUnliftedArray aa1 - 1)
    where
