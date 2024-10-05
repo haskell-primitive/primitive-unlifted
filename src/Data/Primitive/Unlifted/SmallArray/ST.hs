@@ -131,7 +131,7 @@ setSmallUnliftedArray mua v off len = loop (len + off - 1)
    | otherwise = writeSmallUnliftedArray mua i v *> loop (i-1)
 
 -- | Yields the length of an 'UnliftedArray'.
-sizeofSmallUnliftedArray :: SmallUnliftedArray e -> Int
+sizeofSmallUnliftedArray :: SmallUnliftedArray_ unlifted_e e -> Int
 {-# inline sizeofSmallUnliftedArray #-}
 sizeofSmallUnliftedArray (SmallUnliftedArray ar) = I# (sizeofSmallUnliftedArray# ar)
 
@@ -182,8 +182,8 @@ unsafeFreezeSmallUnliftedArray (SmallMutableUnliftedArray maa#)
 -- | Determines whether two 'MutableUnliftedArray' values are the same. This is
 -- object/pointer identity, not based on the contents.
 sameSmallMutableUnliftedArray
-  :: SmallMutableUnliftedArray s a
-  -> SmallMutableUnliftedArray s a
+  :: SmallMutableUnliftedArray_ unlifted_a s a
+  -> SmallMutableUnliftedArray_ unlifted_a s a
   -> Bool
 sameSmallMutableUnliftedArray (SmallMutableUnliftedArray maa1#) (SmallMutableUnliftedArray maa2#)
   = Exts.isTrue# (sameSmallMutableUnliftedArray# maa1# maa2#)
@@ -345,7 +345,7 @@ cloneSmallMutableUnliftedArray (SmallMutableUnliftedArray mary) (I# off) (I# len
   = ST $ \s -> case cloneSmallMutableUnliftedArray# mary off len s of
       (# s', mary' #) -> (# s', SmallMutableUnliftedArray mary' #)
 
-emptySmallUnliftedArray :: SmallUnliftedArray a
+emptySmallUnliftedArray :: SmallUnliftedArray_ unlifted_a a
 emptySmallUnliftedArray = SmallUnliftedArray (emptySmallUnliftedArray# (##))
 
 singletonSmallUnliftedArray :: PrimUnlifted a => a -> SmallUnliftedArray a
